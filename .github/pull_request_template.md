@@ -1,6 +1,8 @@
 ## Cloud One Service
 **select one or multiple if applicable**
 
+[ ] **Common**
+
 [ ] **Workload Security**
 
 [ ] **Application Security**
@@ -15,7 +17,6 @@
 
 [ ] **Open Source Security**
 
-[ ] **Common**
 
 ## Proposed Changes
   - New blah blah
