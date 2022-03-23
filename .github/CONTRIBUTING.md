@@ -1,4 +1,4 @@
-# Contributing to cloudone-filestorage-plugins
+# Contributing to solutions-architect
 
 :tada: Thank you for taking the time to contribute! :tada:
 

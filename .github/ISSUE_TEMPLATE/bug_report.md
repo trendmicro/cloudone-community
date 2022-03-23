@@ -12,7 +12,7 @@ Before submitting an issue, please search for existing issues and
 make sure it is not a duplicate.
 -->
 
-# <PATH_TO_THE_INTEGRATION>
+# <PATH_TO_THE_SOLUTION>
 <!-- For example: # post-scan-actions/aws-python-promote-or-quarantine -->
 
 ## Describe the bug

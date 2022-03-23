@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for an existing integration(s)
+about: Suggest an idea for an existing solution(s)
 title: ''
 labels: enhancement
 assignees: ''
@@ -12,10 +12,10 @@ Before submitting an issue, please search for existing issues and
 make sure it is not a duplicate.
 -->
 
-# <PATH_TO_THE_INTEGRATION>
+# <PATH_TO_THE_SOLUTION>
 <!--
 For example: # post-scan-actions/aws-python-promote-or-quarantine
-If the feature is not related to a integration, put your issue title here.
+If the feature is not related to a solution, put your issue title here.
 -->
 
 ## Problem to solve

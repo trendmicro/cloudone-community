@@ -1,8 +1,8 @@
 ---
-name: New Integration request
-about: Suggest a new integration(s)
+name: New Solution request
+about: Suggest a new solution(s)
 title: ''
-labels: new integration
+labels: new solution
 assignees: ''
 
 ---
@@ -19,10 +19,10 @@ A clear and concise description of what the problem is.
 Ex. I'm always frustrated when [...]
 -->
 
-## Proposed integration
+## Proposed solution
 
 <!--
-A clear and concise description of how you'd like the integration,
+A clear and concise description of how you'd like the solution,
 such as features, parameters, or supported cloud provider.
 -->
 
@@ -34,4 +34,4 @@ A clear and concise description of any alternative solutions you've considered.
 
 ## Additional context
 
-<!-- Any other context or screenshots about the integration request. -->
+<!-- Any other context or screenshots about the solution request. -->
