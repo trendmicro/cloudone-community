@@ -1,15 +1,21 @@
-# Pillar
-[ ] **Cloud One**
+## Cloud One Service
+**select one or multiple if applicable**
 
-[ ] **Vision One**
+[ ] **Workload Security**
 
-[ ] **Platform**
+[ ] **Application Security**
 
-## Service
+[ ] **Network Security**
 
-ie.: Application Security
+[ ] **File Storage Security**
+
+[ ] **Container Security**
+
+[ ] **Conformity**
+
+[ ] **Open Source Security**
 
 ## Proposed Changes
   - New blah blah
   - Creates blah blah
-  -
+  - Full details listed here
