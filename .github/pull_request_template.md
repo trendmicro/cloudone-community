@@ -21,4 +21,4 @@
 ## Proposed Changes
   - New blah blah
   - Creates blah blah
-  - Full details listed here.
+  - Full details listed here..
