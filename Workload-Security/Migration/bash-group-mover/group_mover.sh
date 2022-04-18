@@ -18,12 +18,12 @@ set -e
 IFS=$'\n'
 
 # Define Variables for the DSM
-export DSMAPIKEY=""
+export DSMAPIKEY="PLEASE_CHANGE_ME"
 export DSM="dsm.myorganization.com"
 export DSMPORT="4119"
 
 # Define Variables for the Cloud One Workload Security
-export WSAPIKEY=""
+export WSAPIKEY="PLEASE_CHANGE_ME"
 export REGION="us-1"
 export SERVICE="workload"
 
