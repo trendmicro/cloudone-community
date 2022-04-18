@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Check if JQ/CURL is installed.
+if ! command -v jq &> /dev/null
+then
+    echo "JQ could not be found."
+    exit
+elif ! command -v curl &> /dev/null
+then
+    echo "CURL could not be found."
+    exit
+fi
+
 # This will stop the script when an error is returned from any of the CLI commands
 set -e
 
@@ -8,7 +19,7 @@ IFS=$'\n'
 
 # Define Variables for the DSM
 export DSMAPIKEY=""
-export DSM="dsm.trendmicro.com"
+export DSM="dsm.myorganization.com"
 export DSMPORT="4119"
 
 # Define Variables for the Cloud One Workload Security
