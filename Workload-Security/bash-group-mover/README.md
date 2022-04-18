@@ -91,7 +91,7 @@ PS.: The script was tested with up to 4 levels of sub-groups, but should work ju
 
 If you encounter a bug, think of a useful feature, or find something confusing
 in the docs, please
-[Create a New Issue](https://github.com/felipecosta09/DS-to-C1WS-group-mover/issues/new)!
+[Create a New Issue](https://github.com/trendmicro/solutions-architect/issues/new)!
 
 We :heart: pull requests. If you'd like to fix a bug, contribute to a feature or
 just correct a typo, please feel free to do so.
