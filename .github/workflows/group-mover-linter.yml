@@ -1,0 +1,25 @@
+name: Group-Mover-Linter
+
+# It only trigger when there is change in the code under Workload-Security/Migration/bash-group-mover/
+on:
+  push:
+    paths:
+      - 'Workload-Security/Migration/bash-group-mover/**'
+  pull_request:
+    paths:
+      - 'Workload-Security/Migration/bash-group-mover/**'
+  
+  # Allows to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Linter to check errors in the bash script
+jobs:
+   group-mover-linter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: ShellCheck
+        uses: azohra/shell-linter@latest
+        with:
+          path: "Workload-Security/Migration/bash-group-mover/group_mover.sh"
+          severity: error
