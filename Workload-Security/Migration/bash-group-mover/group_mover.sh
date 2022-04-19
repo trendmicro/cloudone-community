@@ -25,7 +25,6 @@ export DSMPORT="4119"
 # Define Variables for the Cloud One Workload Security
 export WSAPIKEY="PLEASE_CHANGE_ME"
 export REGION="us-1"
-export SERVICE="workload"
 
 # Export all groups names and description from DSM to an Array
 export GROUPS_NAMES=(`curl -k -s -X GET https://$DSM:$DSMPORT/api/computergroups -H "api-secret-key: $DSMAPIKEY" -H 'api-version: v1' | jq '.[][].name'`)
@@ -43,7 +42,7 @@ i=0
 for (( i; i<$GROUPCOUNT; i++ ))
   do
      if [ ${GROUPS_PARENTID[i]} = 'null' ]; then
-     curl -k -s -X POST https://$SERVICE.$REGION.cloudone.trendmicro.com/api/computergroups \
+     curl -k -s -X POST https://workload.$REGION.cloudone.trendmicro.com/api/computergroups \
      -H 'Authorization: ApiKey '$WSAPIKEY'' \
      -H 'api-version: v1' \
      -H "Content-Type: application/json" \
@@ -62,9 +61,9 @@ for (( i; i<$GROUPCOUNT; i++ ))
   do
      if [ ${GROUPS_PARENTID[i]} != "null" ]; then
     DSMGROUPSNAME=(`curl -k -s -X POST https://$DSM:$DSMPORT/api/computergroups/search -H "api-secret-key: $DSMAPIKEY" -H 'api-version: v1' -H "Content-Type: application/json" -d '{ "maxItems": 1, "searchCriteria": [{ "idValue": "'${GROUPS_PARENTID[i]}'" }]}' | jq '.[][].name' | sed 's/"//g'`)
-    NEW_PARENTID=(`curl -k -s -X POST https://$SERVICE.$REGION.cloudone.trendmicro.com/api/computergroups/search -H 'Authorization: ApiKey '$WSAPIKEY'' -H 'api-version: v1' -H "Content-Type: application/json" -d '{ "maxItems": 1, "searchCriteria": [{ "fieldName":"name", "stringValue":"'$DSMGROUPSNAME'" }]}' | jq '.[][].ID'`)
+    NEW_PARENTID=(`curl -k -s -X POST https://workload.$REGION.cloudone.trendmicro.com/api/computergroups/search -H 'Authorization: ApiKey '$WSAPIKEY'' -H 'api-version: v1' -H "Content-Type: application/json" -d '{ "maxItems": 1, "searchCriteria": [{ "fieldName":"name", "stringValue":"'$DSMGROUPSNAME'" }]}' | jq '.[][].ID'`)
     echo ""
-    curl -k -s -X POST https://$SERVICE.$REGION.cloudone.trendmicro.com/api/computergroups \
+    curl -k -s -X POST https://workload.$REGION.cloudone.trendmicro.com/api/computergroups \
      -H 'Authorization: ApiKey '$WSAPIKEY'' \
      -H 'api-version: v1' \
      -H "Content-Type: application/json" \
