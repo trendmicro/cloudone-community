@@ -44,7 +44,6 @@ DSMPORT="My DSM port, eg. 4119"
 # For Cloud One Workload Security:
 WSAPIKEY="My Cloud One API KEY"
 REGION="My Cloud One Region, eg. us-1"
-SERVICE="Destination service" # Is already set to workload so you don't need to change.
 ```
 
 Then you're ready to execute the script, in this example I'm moving these groups:
