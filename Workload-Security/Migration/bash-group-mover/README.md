@@ -2,7 +2,7 @@
 
 In order to help you in the migration process from Deep Security to Cloud One Workload Security, this script will help you on the group migration from Deep Security to Cloud One Workload Security.
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/trendmicro/solutions-architect/Group-Mover-Linter?label=Linter&logo=GitHub%20Actions&logoColor=white)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/trendmicro/solutions-architect/Bash-Linter?label=Linter&logo=GitHub%20Actions&logoColor=white)
 
 ![GitHub issues](https://img.shields.io/github/issues/trendmicro/solutions-architect?label=Issues)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/trendmicro/solutions-architect?label=Pull%20Requests)
