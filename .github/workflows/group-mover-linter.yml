@@ -1,6 +1,6 @@
 name: Bash-Linter
 
-# It only trigger when there is change in the code under Workload-Security/Migration/bash-group-mover/
+# It trigger when any push or PR is made in the the code under the main branch
 on:
   push:
     branches:
