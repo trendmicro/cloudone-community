@@ -1,0 +1,22 @@
+REGION_API_URL:
+  "US-1 or us-west-2": "https://us-west-2-api.cloudconformity.com/v1"
+  "Canada (ca-1)": "https://ca-central-1-api.cloudconformity.com/v1"
+  "Singapore (sg-1)": "https://ap-southeast-1-api.cloudconformity.com/v1"
+  "Japan (jp-1)": "https://ap-northeast-1-api.cloudconformity.com/v1"
+  "Germany (de-1)": "https://eu-central-1-api.cloudconformity.com/v1"
+  "eu-west-1": "https://eu-west-1-api.cloudconformity.com/v1"
+  "eu-west-2": "https://eu-west-2-api.cloudconformity.com/v1"
+  "ap-southeast-2": "https://ap-southeast-2-api.cloudconformity.com/v1"
+  "ap-south-1": "https://ap-south-1-api.cloudconformity.com/v1"
+
+API_CONNECTION_TIMEOUT: 5
+API_READ_TIMEOUT: 60
+API_RETRY_HTTP_STATUSES: [429, 500, 501, 502, 503, 504]
+API_RETRY_COUNT: 3
+# sleep between retries after 2nd retry is computed as follows: {backoff factor} * (2 ** ({number of total retries} - 1))
+# refer to urllib3.Retry for details
+API_RETRY_BACKOFF_FACTOR: 5
+
+BOT_SCAN_CHECK_INTERVAL_IN_SECS: 15
+
+LOG_BACKOFF: True
