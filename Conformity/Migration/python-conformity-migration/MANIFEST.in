@@ -1,3 +1,0 @@
-include src/conformity_migration_tool/config.yml
-include requirements/*.txt
-include tox.ini

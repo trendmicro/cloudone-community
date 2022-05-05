@@ -1,4 +1,0 @@
-build
-twine
-
-pre-commit

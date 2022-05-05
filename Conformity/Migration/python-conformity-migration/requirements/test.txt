@@ -1,8 +1,0 @@
--r build.txt
-pytest
-# pytest-cov
-black
-isort
-flake8
-pylint
-tox
