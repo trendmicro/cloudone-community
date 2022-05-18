@@ -45,7 +45,7 @@ python --version
 2.  Review the [Contributor Guidelines](https://github.com/trendmicro/solutions-architect#Contributor-Guidelines)
 3.  Fork this repository.
 4.  Create a new feature branch, preferably from the `main` branch.
-5.  Make your changes.`
+5.  Make your changes.
 6.  Submit a pull request with an explanation of your changes or additions.
 
 We will review and work with you to release the changes.
