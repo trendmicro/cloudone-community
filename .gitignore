@@ -8,3 +8,14 @@
 
 ## macOS files
 **/.DS_Store
+
+## Generic files to avoid including to this repo
+**/*.log
+**/*.csr
+**/*.jks
+**/*.keystore
+**/*.pem
+**/*.key
+**/*.pub
+**/*.ppk
+**/id_rsa
