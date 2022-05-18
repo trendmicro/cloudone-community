@@ -41,11 +41,12 @@ python --version
 
 ### Contribute
 
-1.  [Open an issue](https://github.com/trendmicro/solutions-architect/issues) before you start contributing so we can discuss the changes and it's alignment with the scope of this project.
+1.  [Open an issue](https://github.com/trendmicro/solutions-architect/issues/new/choose) before you start contributing so we can discuss the changes and it's alignment with the scope of this project.
 2.  Review the [Contributor Guidelines](https://github.com/trendmicro/solutions-architect#Contributor-Guidelines)
-3.  Fork this repository.
-4.  Create a new feature branch, preferably from the `main` branch.
-5.  Make your changes.
-6.  Submit a pull request with an explanation of your changes or additions.
+3. If you are new to GitHub / Git, review the helpful documentation here in our [Wiki](https://github.com/trendmicro/solutions-architect/wiki) before proceeding.
+4.  Fork this repository.
+5.  Create a new feature branch, preferably from the `main` branch.
+6.  Make your changes.
+7.  Submit a pull request with an explanation for your changes or additions.
 
 We will review and work with you to release the changes.
