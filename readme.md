@@ -8,11 +8,11 @@ For bug reports or new feature requests to the team, please [open an issue](http
 
 ## For Contributors
 
-We :heart: contributions from the community. To submit changes:
+We :heart: contributions from the community. To submit changes, please review the following information.
 
 ### Contributor Guidelines
 
-Some tips before you start contributing to this project :
+Some tips before you start contributing to this project:
 
 - The folder structure convention for this repo is '`/product-name/activity-name/your-script-foldername`'.
 
@@ -20,8 +20,8 @@ Some tips before you start contributing to this project :
 
 - Recommended to create a README for your folder to make it easier for the community to make use of your script.
 - Writing separate test scripts in the `/tests` folder or having a built-in `dry-run` mode in the script to ensure everyone can test your script in their environment is much appreciated :)
-- Images and other assets are a welcome addition to your scripts to help everyone run tests / look at examples. Ensure they are stored in relevant folders beside your script, like `/img`, `/assets`, `/examples`, `/tests`.
-- Using linters is super beneficial for easy code reviews.
+- Images and other assets are a welcome addition to your scripts to help everyone run tests / look at examples. Ensure they are stored in relevant folders beside your script, like `/img`, `/assets`, `/examples`, `/tests`. :warning: Avoid including logs with your submission unless it is used as an example. In that case, examples can be included in an `/examples` folder.
+- Using language-specific linters is super beneficial for easier code reviews.
 - For Python scripts, please consider submitting a `requirements.txt` file within your script folder for easier deployment. You can generate a requirements.txt file using the following command
 
 ``` bash
