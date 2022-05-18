@@ -14,9 +14,9 @@ We :heart: contributions from the community. To submit changes, please review th
 
 Some tips before you start contributing to this project:
 
-- The folder structure convention for this repo is '`/product-name/activity-name/your-script-foldername`'.
+- The folder structure convention for this repo is '`/product-name/activity-name/{language}-your-script-foldername`'.
 
-> For example, `/Workload-Security/Migration/hello-migration`
+> For example, `/Workload-Security/Migration/bash-hello-migration`
 
 - Recommended to create a README for your folder to make it easier for the community to make use of your script.
 - Writing separate test scripts in the `/tests` folder or having a built-in `dry-run` mode in the script to ensure everyone can test your script in their environment is much appreciated :)
