@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  release:
+    types: [created]
+
+env:
+  PYTHON_LATEST: "3.9"
+
+jobs:
+  release:
+    name: Publish packages
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: Conformity/Migration/python-conformity-migration-tool
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{env.PYTHON_LATEST}}
+
+      - name: Install Dependencies
+        run: pip install build twine
+
+      - run: python -m build --sdist --wheel .
+
+      - name: Uploads distribution to Github releases folder
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/*
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
+
+      - name: Uploads distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
