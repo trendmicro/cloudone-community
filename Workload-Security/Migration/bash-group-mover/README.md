@@ -2,12 +2,6 @@
 
 In order to help you in the migration process from Deep Security to Cloud One Workload Security, this script will help you migrate Computer Groups from Deep Security to Cloud One Workload Security.
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/trendmicro/solutions-architect/Bash-Linter?label=Linter&logo=GitHub%20Actions&logoColor=white)
-
-![GitHub issues](https://img.shields.io/github/issues/trendmicro/solutions-architect?label=Issues)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/trendmicro/solutions-architect?label=Pull%20Requests)
-![GitHub license](https://img.shields.io/github/license/trendmicro/solutions-architect?label=License)
-
 ## What does this script do?
 
 This script collects your current computers group structure from Deep Security and creating the exact same structure in Cloud One Workload Security via API.
