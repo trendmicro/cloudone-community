@@ -1,0 +1,677 @@
+AWSTemplateFormatVersion: 2010-09-09
+Metadata:
+  'AWS::CloudFormation::Designer':
+    365a09ca-e277-44b0-a6c4-b551b5769bd9:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 180
+        'y': 300
+      z: 1
+      embeds: []
+    69f800e5-71d2-4f0b-8f8b-6a801e9b7606:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 300
+        'y': 300
+      z: 1
+      embeds: []
+    672abbaf-3954-4492-aa43-376f61787304:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 30
+        'y': 300
+      z: 1
+      embeds: []
+      dependson:
+        - 365a09ca-e277-44b0-a6c4-b551b5769bd9
+    8a2c101a-1209-4852-8d7c-82295f267af9:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 300
+        'y': 400
+      z: 1
+      embeds: []
+    db22d819-d2a8-455b-801d-f6419527ff0b:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 450
+        'y': 200
+      z: 1
+      embeds: []
+    ae297b9e-fbf9-4b77-b105-6587eea5a32f:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 180
+        'y': 210
+      z: 1
+      embeds: []
+    a4e855dc-2fb9-499a-a7df-81e7245f5949:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 450
+        'y': 300
+      z: 1
+      embeds: []
+      isassociatedwith:
+        - 69f800e5-71d2-4f0b-8f8b-6a801e9b7606
+    8078251b-2b4f-453a-8850-381ef5bfab52:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 180
+        'y': 90
+      z: 1
+      embeds: []
+      dependson:
+        - ae297b9e-fbf9-4b77-b105-6587eea5a32f
+    d8959c7c-9591-4644-a8a4-ead4904fc2e1:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 30
+        'y': 210
+      z: 1
+      embeds: []
+      dependson:
+        - ae297b9e-fbf9-4b77-b105-6587eea5a32f
+    fe1f2dfc-9b7c-41c3-9160-c8be2c456759:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 410
+        'y': 400
+      z: 0
+      embeds: []
+Resources:
+  LambdaAutomationDeploymentDSA:
+    Type: 'AWS::Lambda::Function'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 69f800e5-71d2-4f0b-8f8b-6a801e9b7606
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt
+        - RoletoLambdaFunction
+        - Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          import json
+          import logging
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          logger.info("logging setup complete")
+
+          def lambda_handler(event, context):
+              logger.info('initializing for instanceid: ' + event['detail']['instance-id'])
+              instanceid = event['detail']['instance-id']
+
+              ec2_resource = boto3.resource('ec2')
+              instance = ec2_resource.Instance(instanceid)
+              instance.wait_until_running()
+
+              #Wait Instance to be with Status check to be ready (2/2)
+              ec2_client = boto3.client('ec2')
+              waiter = ec2_client.get_waiter('instance_status_ok')
+              waiter.wait(InstanceIds=[instanceid])
+
+              logger.info("instance " + instanceid + " is running with status ready 2/2")
+
+              #get the Instance Profile (ARN) from the EC2 if it has already
+              arn_instance_profile = instance.iam_instance_profile
+
+              #Check if the EC2 has the Tag InstallDSA if not add Tag Install DSA with Value 'Yes'
+              if instance.tags == None:
+                  logger.info("instance " + instanceid + " has no tags; adding")
+                  #Call the function addTag
+                  addTag(ec2_client, instanceid)
+              else:
+                  for tags in instance.tags:
+                      if tags['Key'] == "InstallDSA":
+                          if (tags["Value"] == 'No') or (tags["Value"] == 'no') or (tags["Value"] == 'NO'):
+                              #If the tag Install DSA is no exit the lambda Function
+                              logger.info("instance " + instanceid + " has tag InstallDSA == no; aborting")
+                              return 0
+                          elif (tags["Value"] != 'yes') or (tags["Value"] != 'Yes') or (tags["Value"] != 'YES'):
+                              addTag(ec2_client, instanceid)
+                              break
+                  addTag(ec2_client, instanceid)
+
+              if arn_instance_profile == None:
+                  arn_instance_profile_from_CF = os.environ['InstanceProfiletoEC2Arn']
+                  name_instance_profile_from_CF = os.environ['InstanceProfiletoEC2Name']
+                  logger.info("instance " + instanceid + " has no instance profile; fixing it with " + arn_instance_profile_from_CF + " named " + name_instance_profile_from_CF)
+
+                  #Apply one InstanceProfile/Role to the EC2
+                  attach_instance_profile_response = ec2_client.associate_iam_instance_profile(
+                      IamInstanceProfile={
+                          'Arn': arn_instance_profile_from_CF,
+                          'Name': name_instance_profile_from_CF
+                      },
+                      InstanceId=instanceid
+                  )
+
+              else:
+                  #get the instance profile name from insntance profile object with Arn and ID
+                  name_instance_profile = arn_instance_profile['Arn']
+                  name_instance_profile = name_instance_profile.split('/')
+                  name_instance_profile = name_instance_profile[1]
+
+                  #create iam resource to get the role associated with the instance profile
+                  iam = boto3.resource('iam')
+                  instance_profile_info = iam.InstanceProfile(name_instance_profile)
+                  ec2_role_attached = instance_profile_info.roles_attribute
+                  role_name_attached_to_ec2 = ec2_role_attached[0]['RoleName']
+
+                  #get the Managed Policy Name created by CloudFormation
+                  arn_managed_policy_to_attach_to_role = os.environ['PolicyName']
+
+                  #Attaches the specified managed policy to the specified IAM role.
+                  iam_client = boto3.client('iam')
+                  iam_attach_response = iam_client.attach_role_policy(
+                  PolicyArn=arn_managed_policy_to_attach_to_role,
+                  RoleName=role_name_attached_to_ec2,
+                  )
+                  logger.info("instance " + instanceid + " was attached with Managed Policy " + arn_managed_policy_to_attach_to_role )
+
+              return 0
+
+          def addTag(ec2_client, instanceid):
+              logger.info("instance " + instanceid + " is getting the InstallDSA tag")
+              response = ec2_client.create_tags(
+                          Resources=[
+                              instanceid,
+                          ],
+                          Tags=[
+                              {
+                                  'Key': 'InstallDSA',
+                                  'Value': 'Yes'
+                              },
+                          ]
+                      )
+      Runtime: python3.6
+      MemorySize: 128
+      Timeout: '300'
+      Environment:
+        Variables:
+          ARNRole: !GetAtt
+            - RoletoEC2Instances
+            - Arn
+          NameRole: !Ref RoletoEC2Instances
+          PolicyName: !Ref PolicytoRoleEC2
+          InstanceProfiletoEC2Arn: !GetAtt
+            - InstanceProfiletoEC2Instances
+            - Arn
+          InstanceProfiletoEC2Name: !Ref InstanceProfiletoEC2Instances
+          LinuxDocument: !Ref LinuxandWindowsDeployDSADocument
+  CloudWatchEvent1:
+    Type: 'AWS::Events::Rule'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: db22d819-d2a8-455b-801d-f6419527ff0b
+    Properties:
+      EventPattern:
+        detail-type:
+          - EC2 Instance State-change Notification
+        source:
+          - aws.ec2
+        detail:
+          state:
+            - running
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt
+            - LambdaAutomationDeploymentDSA
+            - Arn
+          Id: IdAutomation1
+  RoletoLambdaFunction:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: RoletoLambdaFunction
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 365a09ca-e277-44b0-a6c4-b551b5769bd9
+  LinuxandWindowsDeployDSADocument:
+    Type: 'AWS::SSM::Document'
+    Properties:
+      DocumentType: Command
+      Content:
+        schemaVersion: '2.2'
+        description: >-
+          Installation and Activation Deep Security Agent using AWS SSM - Run
+          Command
+        parameters:
+          DSHostname:
+            type: String
+            default: !Ref DSHostname
+            description: >-
+              Enter the externally accessible DNS name of IP address of the Deep
+              Security Manager.Please enter app.deepsecurity.trendmicro.com if
+              using Deep Security as a server.
+            maxChars: 4096
+          DSHostnameActivation:
+            type: String
+            default: !Ref DSHostnameAgent
+            description: >-
+              Enter the externally accessible DNS name of IP address of the Deep
+              Security Manager to activate agents by CLI. Please enter
+              agents.deepsecurity.trendmicro.com if using Deep Security as a
+              server.
+            maxChars: 4096
+          DSPort:
+            type: String
+            default: !Ref DSPort
+            description: >-
+              Enter the port number of the Deep Security Manager. If using the
+              installed software package, enter 4120 or the port accessible
+              externally. Port 443 is used as default if no value is provided.
+              Please enter 443 if using Deep Security as a service
+            maxChars: 4096
+          TenantID:
+            type: String
+            default: !Ref TenantID
+            description: >-
+              Enter the tenant ID, which is a hyphenated, 36-character string
+              available in the Deployment Scripts dialog box in the Deep
+              Security console. This parameter is mandatory if using Deep
+              Security as a Service, or a multi-tenant installation of Deep
+              Security Manager. Type NA id using a non-multi-tenant Manager.
+            maxChars: 4096
+          Token:
+            type: String
+            default: !Ref Token
+            description: >-
+              Enter the tenant activation token, which is a hyphenated,
+              36-character string available in the Deployment Scripts dialog box
+              in the Deep Security console. This parameter is mandatory if using
+              Deep Security as a Service, or a multi-tenant installation of Deep
+              Security Manager. Type NA id using a non-multi-tenant Manager.
+            maxChars: 4096
+          workingDirectory:
+            type: String
+            default: ''
+            description: (Optional) The path to the working directory on your instance.
+            maxChars: 4096
+          executionTimeout:
+            type: String
+            default: '3600'
+            description: >-
+              (Optional) The time in seconds for a command to complete before it
+              is considered to have failed. Default is 3600 (1 hour). Maximum is
+              28800 (8 hours).
+            allowedPattern: >-
+              ([1-9][0-9]{0,3})|(1[0-9]{1,4})|(2[0-7][0-9]{1,3})|(28[0-7][0-9]{1,2})|(28800)
+        mainSteps:
+          - action: 'aws:runPowerShellScript'
+            precondition:
+              StringEquals:
+                - platformType
+                - Windows
+            name: runPowerShellScript
+            inputs:
+              runCommand:
+                - <powershell>
+                - '#requires -version 4.0'
+                - >-
+                  # This script detects platform and architecture.  It then
+                  downloads and installs the relevant Deep Security Agent 10
+                  package
+                - >-
+                  if (-NOT ([Security.Principal.WindowsPrincipal]
+                  [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]
+                  "Administrator")) {
+                - >-
+                  Write-Warning "You are not running as an Administrator. Please
+                  try again with admin privileges."
+                - 'exit 1 }'
+                - '$TENANTID="{{ TenantID }}" '
+                - '$TOKEN="{{ Token }}" '
+                - 'if ((Get-Item $Env:ProgramFiles"\Trend Micro\Deep Security Agent\dsa.exe" ).Exists){ '
+                - 'echo "$(Get-Date -format T) - DSA Installed" '
+                - 'if (& $Env:ProgramFiles"\Trend Micro\Deep Security Agent\dsa_query.cmd" --cmd GetAgentStatus dsmUrl){ '
+                - 'echo "$(Get-Date -format T) - DSA Activated" '
+                - 'exit } '
+                - 'else { '
+                - 'echo "$(Get-Date -format T) - DSA not activated" '
+                - 'echo "$(Get-Date -format T) - DSA activation started" '
+                - '& $Env:ProgramFiles"\Trend Micro\Deep Security Agent\dsa_control" -r '
+                - 'if ([string]::IsNullOrEmpty($TENANTID) -and [string]::IsNullOrEmpty($TOKEN)){ '
+                - >-
+                  & $Env:ProgramFiles"\Trend Micro\Deep Security
+                  Agent\dsa_control" -a dsm://{{ DSHostnameActivation }}:{{
+                  DSPort }}/
+                - '} else { '
+                - 'if ([string]::IsNullOrEmpty($TENANTID) -and ![string]::IsNullOrEmpty($TOKEN)){ '
+                - >-
+                  & $Env:ProgramFiles"\Trend Micro\Deep Security
+                  Agent\dsa_control" -a dsm://{{ DSHostnameActivation }}:{{
+                  DSPort }}/ 'token:{{ Token }}'
+                - '}else { '
+                - >-
+                  & $Env:ProgramFiles"\Trend Micro\Deep Security
+                  Agent\dsa_control" -a dsm://{{ DSHostnameActivation }}:{{
+                  DSPort }}/ 'tenantID:{{ TenantID }}' 'token:{{ Token }}'
+                - '}'
+                - '}'
+                - 'exit } '
+                - '}'
+                - >-
+                  $env:LogPath = "$env:appdata\Trend Micro\Deep Security
+                  Agent\installer"
+                - 'New-Item -path $env:LogPath -type directory'
+                - 'Start-Transcript -path "$env:LogPath\dsa_deploy.log" -append '
+                - 'echo "$(Get-Date -format T) - DSA download started" '
+                - >-
+                  [Net.ServicePointManager]::SecurityProtocol =
+                  [Net.SecurityProtocolType]::Tls12;
+                - '$baseUrl="https://app.deepsecurity.trendmicro.com:443/" '
+                - 'if ( [intptr]::Size -eq 8 ) { '
+                - '$sourceUrl=-join($baseurl, "software/agent/Windows/x86_64/") }'
+                - 'else { '
+                - '$sourceUrl=-join($baseurl, "software/agent/Windows/i386/") } '
+                - >-
+                  echo "$(Get-Date -format T) - Download Deep Security Agent
+                  Package" $sourceUrl
+                - 'Try '
+                - '{ '
+                - >-
+                  (New-Object System.Net.WebClient).DownloadFile($sourceUrl,
+                  "$env:temp\agent.msi")
+                - '}'
+                - 'Catch [System.Net.WebException] { '
+                - >-
+                  echo "TLS certificate validation for the agent package
+                  download has failed. Please check that your Deep Security
+                  Manager TLS certificate is signed by a trusted root
+                  certificate authority. For more information, search for
+                  `"deployment scripts`" in the Deep Security Help Center."
+                - 'exit 2; '
+                - '}'
+                - 'if ( (Get-Item "$env:temp\agent.msi").length -eq 0 ) { '
+                - >-
+                  echo "Failed to download the Deep Security Agent. Please check
+                  if the package is imported into the Deep Security Manager. "
+                - 'exit 1 }'
+                - >-
+                  echo "$(Get-Date -format T) - Downloaded File Size:" (Get-Item
+                  "$env:temp\agent.msi").length
+                - 'echo "$(Get-Date -format T) - DSA install started" '
+                - >-
+                  echo "$(Get-Date -format T) - Installer Exit Code:"
+                  (Start-Process -FilePath msiexec -ArgumentList "/i
+                  $env:temp\agent.msi /qn ADDLOCAL=ALL /l*v
+                  `"$env:LogPath\dsa_install.log`"" -Wait -PassThru).ExitCode
+                - 'echo "$(Get-Date -format T) - DSA activation started" '
+                - Start-Sleep -s 50
+                - >-
+                  & $Env:ProgramFiles"\Trend Micro\Deep Security
+                  Agent\dsa_control" -r
+                - 'if ([string]::IsNullOrEmpty($TENANTID) -and [string]::IsNullOrEmpty($TOKEN)){ '
+                - >-
+                  & $Env:ProgramFiles"\Trend Micro\Deep Security
+                  Agent\dsa_control" -a dsm://{{ DSHostnameActivation }}:{{
+                  DSPort }}/
+                - '} else { '
+                - 'if ([string]::IsNullOrEmpty($TENANTID) -and ![string]::IsNullOrEmpty($TOKEN)){ '
+                - >-
+                  & $Env:ProgramFiles"\Trend Micro\Deep Security
+                  Agent\dsa_control" -a dsm://{{ DSHostnameActivation }}:{{
+                  DSPort }}/ 'token:{{ Token }}'
+                - '}else { '
+                - >-
+                  & $Env:ProgramFiles"\Trend Micro\Deep Security
+                  Agent\dsa_control" -a dsm://{{ DSHostnameActivation }}:{{
+                  DSPort }}/ 'tenantID:{{ TenantID }}' 'token:{{ Token }}'
+                - '}'
+                - '}'
+                - 'Stop-Transcript '
+                - 'echo "$(Get-Date -format T) - DSA Deployment Finished" '
+                - </powershell>
+              workingDirectory: '{{ workingDirectory }}'
+              timeoutSeconds: '{{ executionTimeout }}'
+          - action: 'aws:runShellScript'
+            precondition:
+              StringEquals:
+                - platformType
+                - Linux
+            name: runShellScript
+            inputs:
+              runCommand:
+                - '#!/bin/bash'
+                - '# This script detects platform and architecture, then downloads and installs the matching Deep Security Agent package'
+                - 'if [[ $(/usr/bin/id -u) -ne 0 ]]; then echo You are not running as the root user.  Please try again with root privileges.;'
+                - 'logger -t You are not running as the root user.  Please try again with root privileges.;'
+                - 'exit 1;'
+                - 'fi;'
+                - 'TENANTID={{ TenantID }}'
+                - 'TOKEN={{ Token }}'
+                - 'if [ -f /opt/ds_agent/ds_agent ]; then'
+                - 'echo "Agent Installed"; '
+                - >-
+                  if /opt/ds_agent/dsa_query --cmd GetAgentStatus | grep
+                  dsmUrl; then echo "Agent Activated";
+                - 'exit;'
+                - 'else echo "Agent not Activated"; '
+                - '/opt/ds_agent/dsa_control -r '
+                - 'if [ -z "$TENANTID" ] && [ -z "$TOKEN" ]  ; then '
+                - >-
+                  /opt/ds_agent/dsa_control -a dsm://{{ DSHostnameActivation }}:{{ DSPort }}/
+                - 'else'
+                - 'if [ -z "$TENANTID" ]  ; then '
+                - >-
+                  /opt/ds_agent/dsa_control -a dsm://{{ DSHostnameActivation }}:{{ DSPort }}/ 'token:{{ Token }}'
+                - 'else'
+                - >-
+                  /opt/ds_agent/dsa_control -a dsm://{{ DSHostnameActivation }}:{{ DSPort }}/ 'tenantID:{{ TenantID
+                  }}' 'token:{{ Token }}'
+                - 'fi'
+                - 'fi'
+                - 'exit; '
+                - 'fi; '
+                - 'fi'
+                - 'if type curl >/dev/null 2>&1; then '
+                - 'SOURCEURL=''https://app.deepsecurity.trendmicro.com:443'' '
+                - >-
+                  CURLOUT=$(eval curl
+                  $SOURCEURL/software/deploymentscript/platform/linux-secure/ -o
+                  /tmp/DownloadInstallAgentPackage --silent --tlsv1.2;)
+                - '. /tmp/DownloadInstallAgentPackage'
+                - 'Download_Install_Agent'
+                - 'else'
+                - 'echo " Please install CURL before running this script." '
+                - 'logger -t Please install CURL before running this script '
+                - 'false'
+                - 'fi'
+                - 'TENANTID={{ TenantID }}'
+                - 'TOKEN={{ Token }}'
+                - 'sleep 15'
+                - '/opt/ds_agent/dsa_control -r'
+                - 'if [ -z "$TENANTID" ] && [ -z "$TOKEN" ]  ; then '
+                - >-
+                  /opt/ds_agent/dsa_control -a dsm://{{ DSHostnameActivation }}:{{ DSPort }}/
+                - 'else'
+                - 'if [ -z "$TENANTID" ]  ; then '
+                - >-
+                  /opt/ds_agent/dsa_control -a dsm://{{ DSHostnameActivation }}:{{ DSPort }}/ 'token:{{ Token }}'
+                - 'else'
+                - >-
+                  /opt/ds_agent/dsa_control -a dsm://{{ DSHostnameActivation }}:{{ DSPort }}/ 'tenantID:{{ TenantID
+                  }}' 'token:{{ Token }}'
+                - 'fi'
+                - 'fi'
+              workingDirectory: '{{ workingDirectory }}'
+              timeoutSeconds: '{{ executionTimeout }}'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 8a2c101a-1209-4852-8d7c-82295f267af9
+  RoletoEC2Instances:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: RoletoEC2Instances
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: ae297b9e-fbf9-4b77-b105-6587eea5a32f
+  PolicytoRoleLambdaFunction:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: PolicytoRoleLambdaFunction
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: '*'
+            Resource: '*'
+      Roles:
+        - !Ref RoletoLambdaFunction
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 672abbaf-3954-4492-aa43-376f61787304
+    DependsOn:
+      - RoletoLambdaFunction
+  ProdAutoSSMLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:invokeFunction'
+      FunctionName: !GetAtt
+        - LambdaAutomationDeploymentDSA
+        - Arn
+      SourceArn: !GetAtt
+        - CloudWatchEvent1
+        - Arn
+      Principal: events.amazonaws.com
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: a4e855dc-2fb9-499a-a7df-81e7245f5949
+  InstanceProfiletoEC2Instances:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - !Ref RoletoEC2Instances
+      InstanceProfileName: InstanceProfiletoEC2Instances
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 8078251b-2b4f-453a-8850-381ef5bfab52
+    DependsOn:
+      - RoletoEC2Instances
+  PolicytoRoleEC2:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'iam:PassRole'
+              - 'ec2:DescribeInstances'
+              - 'ec2messages:GetMessages'
+              - 'ec2messages:AcknowledgeMessage'
+              - 'ec2messages:SendReply'
+              - 'logs:CreateLogGroup'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+              - 'ssm:*'
+              - 'lambda:*'
+              - 'iam:ListRoles'
+            Resource: '*'
+      Roles:
+        - !Ref RoletoEC2Instances
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: d8959c7c-9591-4644-a8a4-ead4904fc2e1
+    DependsOn:
+      - RoletoEC2Instances
+  SSMAssociateLinuxandWindowsDSA:
+    Type: 'AWS::SSM::Association'
+    Properties:
+      AssociationName: SSMAssociateLinuxandWindowsDSA
+      Name: !Ref LinuxandWindowsDeployDSADocument
+      Targets:
+          - Key: tag:InstallDSA
+            Values:
+              - 'Yes'
+      ScheduleExpression: cron(0/30 * * * ? *)
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: fe1f2dfc-9b7c-41c3-9160-c8be2c456759
+Outputs:
+  RoletoEC2Arn:
+    Description: The ARN of Role
+    Value: !GetAtt
+      - RoletoEC2Instances
+      - Arn
+  PolicytoEC2Arn:
+    Description: The ARN from the Policy to Role EC2 Instances
+    Value: !Ref PolicytoRoleEC2
+    Export:
+      Name: PolicyRoleforEC2
+  DocumentLinux:
+    Description: Info about Document Deploy for Linux and Windows
+    Value: !Ref LinuxandWindowsDeployDSADocument
+Parameters:
+  TenantID:
+    Type: String
+    Default: ''
+    Description: Enter with the TenantID from your Deep Security Console
+  Token:
+    Type: String
+    Default: ''
+    Description: Enter with the Token from your Deep Security Console
+  DSHostname:
+    Type: String
+    Default: app.deepsecurity.trendmicro.com
+    Description: >-
+      Enter with the FQDN from your Deep Security Console if is On-Premise or
+      keep the default FQDN if you are using DSaaS. Example (app.deepsecurity.trendmicro.com)
+  DSPort:
+    Type: String
+    Default: '443'
+    Description: >-
+      Enter the port number of the Deep Security Manager. If using the installed
+      software package, enter 4120 or the port accessible externally. Port 443
+      is used as default if no value is provided. Please keep 443 if using Deep
+      Security as a service
+  DSHostnameAgent:
+    Type: String
+    Default: agents.deepsecurity.trendmicro.com
+    Description: >-
+      Enter the externally accessible DNS name of IP address of the Deep
+      Security Manager to activate agents by CLI. Please enter keep
+      agents.deepsecurity.trendmicro.com if using Deep Security as a Services.
