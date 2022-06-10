@@ -1,0 +1,3 @@
+my-bucket-exclusion-1
+another-exclude-bucket
+this-bucket-should-not-be-monitored
