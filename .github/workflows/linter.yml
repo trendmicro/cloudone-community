@@ -1,0 +1,36 @@
+name: "Code Linter"
+
+# It trigger when any push or PR is made in the the code under the branch configured
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+  
+  # Allows to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Linter to check errors
+jobs:
+   Linter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # Full git history is needed to get a proper list of changed files within `super-linter`
+          fetch-depth: 0
+      - name: Lint Code Base
+        uses: github/super-linter@v4
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_PYTHON_PYLINT: true
+          VALIDATE_JAVASCRIPT_ES: true
+          VALIDATE_BASH: true
+          VALIDATE_POWERSHELL: true
+          VALIDATE_CLOUDFORMATION: true
+          VALIDATE_JSON: true
+          VALIDATE_YAML: true
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
