@@ -1,12 +1,5 @@
 ## Introduction
 
-
-![Linter Workflow Status](https://img.shields.io/github/workflow/status/trendmicro/solutions-architect/Linter?label=Linter&logo=GitHub%20Actions&logoColor=white)
-![Code Scanning Workflow Status](https://img.shields.io/github/workflow/status/trendmicro/solutions-architect/Code-Scanning?label=Code%20Scanning&logo=GitHub%20Actions&logoColor=white)
-![GitHub Issues](https://img.shields.io/github/issues/trendmicro/solutions-architect?label=Issues)
-![GitHub Pull Requests](https://img.shields.io/github/issues-pr/trendmicro/solutions-architect?label=Pull%20Requests)
-![GitHub License](https://img.shields.io/github/license/trendmicro/solutions-architect?label=License)
-
 This is an Open Source community project. Project contributors may be able to help, depending on their time and availability. Please be specific about what you're trying to do, your system, and steps to reproduce your scenario when opening a GitHub issue.
 
 For bug reports or new feature requests to the team, please [open an issue](https://github.com/trendmicro/solutions-architect/issues/new/choose). You are also welcome to [contribute](https://github.com/trendmicro/solutions-architect#for-contributors) to this project.
