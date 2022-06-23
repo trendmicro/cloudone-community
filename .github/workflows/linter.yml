@@ -21,6 +21,12 @@ jobs:
         with:
           # Full git history is needed to get a proper list of changed files within `super-linter`
           fetch-depth: 0
+      - name: Setup Linter cfn-lint
+        uses: scottbrenner/cfn-lint-action@v2
+      - name: Run Linter
+        run: |
+          cfn-lint --version
+          cfn-lint -t ./**/*.yaml -i W E3012 E3005
       - name: Lint Code Base
         uses: github/super-linter@v4
         env:
@@ -29,8 +35,6 @@ jobs:
           VALIDATE_JAVASCRIPT_ES: true
           VALIDATE_BASH: true
           VALIDATE_POWERSHELL: true
-          VALIDATE_CLOUDFORMATION: true
           VALIDATE_JSON: true
-          VALIDATE_YAML: true
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
