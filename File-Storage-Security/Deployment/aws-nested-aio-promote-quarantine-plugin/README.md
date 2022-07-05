@@ -8,23 +8,36 @@ Launch the CloudFormation template provided below.
 
 ## Prerequisites
 
-1. **Create S3 buckets**
-    - Create a 'Scanning bucket' to be monitored by File Storage Security.
+1. Valid [Cloud One account](https://cloudone.trendmicro.com/trial) with current subscription to [File Storage Security](https://aws.amazon.com/marketplace/pp/prodview-g232pyu6l55l4).
+
+2. **Create S3 buckets**
+
+    - Create a 'Scanning bucket' to be monitored by File Storage Security. 
     - Create a 'Promote bucket' to receive clean files. Example: `fss-promote`.
     - Create a 'Quarantine bucket' to receive quarantined files. Example: `fss-quarantine`.
+
+**PS** You are not required to have both a promote and quarantine bucket. You may opt for one or the other. Just leave the parameter(s) blank.
 
 ## Stack Parameters
 
 Fill out the Quick create stack page as follows:
 
-- Stack name: Specify the name of the stack. Example: FileStorageSecurity-All-In-One.
-- S3BucketToScan: Specify the name of your S3 bucket to scan, as it appears in S3. You can only specify one bucket.
-- ScannerEphemeralStorage: The size of the scanner lambda function's temp directory in MB. The default value is 512, but it can be any whole number between 512 and 2048 MB. Configure a large ephemeral storage to scan larger files in zip files.
-- PROMOTEBUCKET: 'Promote bucket' to receive clean files.
-- QUARANTINEBUCKET: 'Quarantine bucket' to receive quarantined files.
-- Trend Micro Cloud One region: Cloud One account region
-- ExternalID: Cloud One Account Ext ID.
-  
+- **Stack name**: Specify the name of the stack. Example: ```FileStorageSecurity-All-In-One```
+- **S3BucketToScan**: Example: ```my-s3-bucket-to-scan-01```
+- **ScannerEphemeralStorage**: The size of the scanner lambda function's temp directory in MB. The default value is 512, but it can be any whole number between 512 and 2048 MB. Configure a large ephemeral storage to scan larger files in zip files.
+- **PROMOTEBUCKET**: 'Promote bucket' to receive clean files.
+- **QUARANTINEBUCKET**: 'Quarantine bucket' to receive quarantined files.
+- **Trend Micro Cloud One region**: Cloud One account region
+- **ExternalID**: Cloud One Account Ext ID.
+
+## Register the Stack to Cloud One - File Storage Security
+
+From the Outputs tab of the deployed Files Storage Security stack collect the following two ARN values:
+
+- **ScannerStackManagementRoleARN**
+- **StorageStackManagementRoleARN**
+
+For more information on how to confirgure ARNs after deploying check [here](https://cloudone.trendmicro.com/docs/file-storage-security/gs-arn/).
 
 
 ## Test the Application
