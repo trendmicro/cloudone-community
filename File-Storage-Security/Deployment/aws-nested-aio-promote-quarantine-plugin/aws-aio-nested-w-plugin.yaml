@@ -1,0 +1,465 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Trend Micro File Storage Security scanner and storage stacks
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "[ Customizable section ]"
+        Parameters:
+          - S3BucketToScan
+          - ObjectFilterPrefix
+          - KMSKeyARNForBucketSSE
+          - KMSKeyARNForQueueSSE
+          - KMSKeyARNForTopicSSE
+          - ScannerEphemeralStorage
+          - TriggerWithObjectCreatedEvent
+          - ReportObjectKey
+          - ScanOnGetObject
+      - Label:
+          default: "[ Optional: Permissions control ]"
+        Parameters:
+          - PermissionsBoundary
+          - AdditionalIAMPolicies
+      - Label:
+          default: "[ Optional: Resource prefixes ] Warning: Do not modify these fields when you update the stack. This may cause management problems. The maximum prefix length is 50 characters."
+        Parameters:
+          - IAMRolePrefix
+          - IAMPolicyPrefix
+          - LambdaFunctionPrefix
+          - LambdaLayerPrefix
+          - SQSQueuePrefix
+          - SNSTopicPrefix
+      - Label:
+          default: "[ Optional: Deploy in VPC ] Warning: Make sure the subnets have access to domains .amazonaws.com and .trendmicro.com over HTTPS"
+        Parameters:
+          - SubnetIDs
+          - SecurityGroupIDs
+          - NetworkProxy
+      - Label:
+          default: "[ Optional: Storage stack dead-letter queues ARNs ] The SQS ARNs for dead-letter queues can all be the same value. They have to be both deployed in the same region and managed by the same account as the storage stack."
+        Parameters:
+          - BucketListenerDLQARN
+          - PostScanActionTagDLQARN
+          - ScanResultTopicDLQARN
+          - KMSKeyARNForDLQSSE
+      - Label:
+          default: "[Promote and Quarantine Parameters section]"
+        Parameters:
+          - ACL
+          - PromoteBucketName
+          - PromoteMode
+          - QuarantineBucketName
+          - QuarantineMode
+          - ScanResultTopicARN
+      - Label:
+          default: "[ Warning: Do not modify the fields below. Modifications may cause your deployment to fail. ]"
+        Parameters:
+          - FSSBucketName
+          - FSSKeyPrefix
+          - TrendMicroManagementAccount
+          - CloudOneRegion
+          - ExternalID
+
+    ParameterLabels:
+      ACL:
+        default: ACL
+      AdditionalIAMPolicies:
+        default: AdditionalIAMPolicies
+      BucketListenerDLQARN:
+        default: SQS ARN for BucketListenerLambda DLQ
+      CloudOneRegion:
+        default: Trend Micro Cloud One region
+      ExternalID:
+        default: ExternalID
+      FSSBucketName:
+        default: Stack package location
+      FSSKeyPrefix:
+        default: Version
+      IAMPolicyPrefix:
+        default: Prefix for IAM policy name
+      IAMRolePrefix:
+        default: Prefix for IAM role name
+      KMSKeyARNForBucketSSE:
+        default: KMSKeyARNForBucketSSE
+      KMSKeyARNForDLQSSE:
+        default: KMSKeyARNForDLQSSE
+      KMSKeyARNForQueueSSE:
+        default: KMSKeyARNForQueueSSE
+      KMSKeyARNForTopicSSE:
+        default: KMSKeyARNForTopicSSE
+      LambdaFunctionPrefix:
+        default: "Prefix for Lambda function name [ Warning: Do not modify this field when you update the stack. Modifications may cause your update to fail. ]"
+      LambdaLayerPrefix:
+        default: Prefix for Lambda layer name
+      NetworkProxy:
+        default: NetworkProxy
+      ObjectFilterPrefix:
+        default: ObjectFilterPrefix
+      PermissionsBoundary:
+        default: PermissionsBoundary
+      PostScanActionTagDLQARN:
+        default: SQS ARN for PostScanActionTagLambda DLQ
+      PromoteBucketName:
+        default: PromoteBucketName
+      ReportObjectKey:
+        default: ReportObjectKey
+      S3BucketToScan:
+        default: S3BucketToScan
+      ScannerEphemeralStorage:
+        default: "ScannerEphemeralStorage [ In Preview ]"
+      ScanOnGetObject:
+        default: "ScanOnGetObject [ In Preview ]"
+      ScanResultTopicDLQARN:
+        default: ScanResultTopicDLQARN
+      SecurityGroupIDs:
+        default: SecurityGroupIDs
+      SNSTopicPrefix:
+        default: Prefix for SNS topic name
+      SQSQueuePrefix:
+        default: Prefix for SQS queue name
+      SubnetIDs:
+        default: SubnetIDs
+      TrendMicroManagementAccount:
+        default: File Storage Security management account
+      TriggerWithObjectCreatedEvent:
+        default: TriggerWithObjectCreatedEvent
+
+Parameters:
+  AdditionalIAMPolicies:
+    Default: ''
+    Description: A comma-separated list of IAM policy ARNs to attach to all the roles that will be created.
+    Type: CommaDelimitedList
+  BucketListenerDLQARN:
+    Default: ''
+    Description: The SQS ARN for BucketListenerLambda DLQ.
+    Type: String
+  CloudOneRegion:
+    Description: The region of the Trend Micro Cloud One services.
+    Type: String
+    Default: us-1
+  ExternalID:
+    Description: "The External ID is for future use with updating Lambdas and also to address and prevent the 'confused deputy' problem."
+    Type: String
+  FSSBucketName:
+    ConstraintDescription:
+      File Storage Security bucket name can include numbers, lowercase
+      letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
+      (-).
+    Default: file-storage-security
+    Description: ""
+    Type: String
+  FSSKeyPrefix:
+    ConstraintDescription:
+      File Storage Security key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), and forward slash (/).
+    Default: latest/
+    Description: ""
+    Type: String
+  IAMPolicyPrefix:
+    AllowedPattern: ^$|^[a-zA-Z0-9+=,.@\-_]+-$
+    ConstraintDescription: Prefix for IAM policy name can be empty or include alphanumeric and '+=,.@-_' characters and must end with a hyphen. The maximum length is 50 characters.
+    Default: ''
+    Description: Prefix for the name of the IAM Policies. Must end with a hyphen (-).
+    Type: String
+    MaxLength: 50
+  IAMRolePrefix:
+    AllowedPattern: ^$|^[a-zA-Z0-9+=,.@\-_]+-$
+    ConstraintDescription: Prefix for IAM role name can be empty or include alphanumeric and '+=,.@-_' characters and must end with a hyphen. The maximum length is 50 characters.
+    Default: ''
+    Description: Prefix for the name of the IAM roles being deployed. Must end with a hyphen (-).
+    Type: String
+    MaxLength: 50
+  KMSKeyARNForBucketSSE:
+    Default: ''
+    Description: The ARN for the KMS master key used to encrypt S3 bucket objects. Leave it blank if you haven't enabled SSE-KMS for the bucket.
+    Type: String
+  KMSKeyARNForDLQSSE:
+    Default: ''
+    Description: The ARN for the KMS master key used to encrypt messages of DLQ for storage stack. Leave it blank if you haven't used your own CMK for SQS server-side encryption on the queue ARNs you provided.
+    Type: String
+  KMSKeyARNForQueueSSE:
+    Default: ''
+    Description: The ARN for the KMS master key used to encrypt messages in SQS. Leave it blank if you haven't used your own CMK for SQS server-side encryption.
+    Type: String
+  KMSKeyARNForTopicSSE:
+    Default: ''
+    Description: The ARN for the KMS master key used to encrypt messages in SNS. Leave it blank if you haven't used your own CMK for SNS server-side encryption.
+    Type: String
+  LambdaFunctionPrefix:
+    AllowedPattern: ^$|^[a-zA-Z0-9_\-]+-$
+    ConstraintDescription: Prefix for Lambda function name can be empty or include letters, numbers, hyphens (-), and underscores (_) and must end with a hyphen. The maximum length is 50 characters.
+    Default: ''
+    Description: Prefix for the name of the Lambda functions being deployed. Must end with a hyphen (-).
+    Type: String
+    MaxLength: 50
+  LambdaLayerPrefix:
+    AllowedPattern: ^$|^[a-zA-Z0-9_\-]+-$
+    ConstraintDescription: Prefix for Lambda layer name can be empty or include letters, numbers, hyphens (-), and underscores (_) and must end with a hyphen. The maximum length is 50 characters.
+    Default: ''
+    Description: Prefix for the name of the Lambda layers being deployed. Must end with a hyphen (-).
+    Type: String
+    MaxLength: 50
+  NetworkProxy:
+    Default: ''
+    Description: Network proxy setting in the format scheme://[user:pass@]host:port, for example http://proxy.server:8080. Leave it blank if you don't want Lambda functions to connect to an explicit proxy in the VPC.
+    Type: String
+  ObjectFilterPrefix:
+    Default: ''
+    Description: Limit the scan to objects whose key starts with the specified characters.
+    Type: String
+  PermissionsBoundary:
+    Default: ''
+    Description: The ARN of the policy used to set the permissions boundary for all the roles that will be created.
+    Type: String
+  PostScanActionTagDLQARN:
+    Default: ''
+    Description: The SQS ARN for PostScanActionTag DLQ.
+    Type: String
+  ReportObjectKey:
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: |-
+      Enable this to report the object keys of the scanned objects to File Storage Security backend services.
+      File Storage Security can then display the object keys of the malicious objects in the response of events API.
+    Type: String
+  S3BucketToScan:
+    Description: The S3 bucket to scan. Specify an existing S3 bucket.
+    Type: String
+  ScannerEphemeralStorage:
+    Default: 512
+    Description: |
+      The size of the scanner lambda function's temp directory in MB. The default value is 512, but it can be any whole number between 512 and 2048 MB.
+      Configure a large ephemeral storage to scan larger files in zip files.
+      For more information, see https://docs.aws.amazon.com/lambda/latest/dg/configuration-function-common.html#configuration-ephemeral-storage
+    Type: Number
+    MinValue: 512
+    MaxValue: 2048
+  ScanOnGetObject:
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: |
+      Scan objects retrieved (GET requests) from S3 with the Object Lambda Access Point.
+      This option requires that the storage stack is deployed in both the same account and the same region as the scanner stack.
+      For more information, see https://cloudone.trendmicro.com/docs/file-storage-security/aws-scan-on-get-object/
+    Type: String
+  ScanResultTopicDLQARN:
+    Default: ''
+    Description: The SQS ARN for ScanResultTopic DLQ.
+    Type: String
+  SecurityGroupIDs:
+    Default: ''
+    Description: A comma-separated list of VPC Security Group IDs that are attached to Lambda functions. Leave it blank if you don't want to attach Lambda functions to a VPC.
+    Type: CommaDelimitedList
+  SNSTopicPrefix:
+    AllowedPattern: ^$|^[a-zA-Z0-9_\-]+-$
+    ConstraintDescription: Prefix for SNS topic name can be empty or include include alphanumeric characters, hyphens (-) and underscores (_) and must end with a hyphen. The maximum length is 50 characters.
+    Default: ''
+    Description: Prefix for the name of SNS topics being deployed. Must end with a hyphen (-).
+    Type: String
+    MaxLength: 50
+  SQSQueuePrefix:
+    AllowedPattern: ^$|^[a-zA-Z0-9_\-]+-$
+    ConstraintDescription: Prefix for SQS queue name can be empty or include alphanumeric characters, hyphens (-), and underscores (_) and must end with a hyphen. The maximum length is 50 characters.
+    Default: ''
+    Description: Prefix for the name of SQS queues being deployed. Must end with a hyphen (-).
+    Type: String
+    MaxLength: 50
+  SubnetIDs:
+    Default: ''
+    Description: A comma-separated list of VPC Subnet IDs that are attached to Lambda functions. Leave it blank if you don't want to attach Lambda functions to a VPC.
+    Type: CommaDelimitedList
+  TrendMicroManagementAccount:
+    ConstraintDescription: AWS account ID.
+    Default: 415485722356
+    Description: This account will be given permission to modify the stacks for upgrades and troubleshooting purposes.
+    Type: String
+  TriggerWithObjectCreatedEvent:
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: If the s3:ObjectCreated:* event of the S3BucketToScan is in use, set this option to false. Then trigger the scans by invoking the deployed BucketListenerLambda.
+    Type: String
+
+  PromoteBucketName:
+    Type: String
+    Default: ''
+    Description: |
+      [Optional] The bucket name used to promote files without malicious intent.
+      Leave the bucket name blank to disable promoting.
+  PromoteMode:
+    Type: String
+    AllowedValues:
+      - move
+      - copy
+    Default: move
+    Description: |
+      The method by which files were promoted.
+      (Options: move, copy)
+  QuarantineBucketName:
+    Type: String
+    Default: ''
+    Description: |
+      [Optional] The bucket name to quarantine malicious files.
+      Leave the bucket name blank to disable quarantining
+  QuarantineMode:
+    Type: String
+    AllowedValues:
+      - move
+      - copy
+    Default: move
+    Description: |
+      The method by which files were quarantined.
+      (Options: move, copy)
+  ACL:
+    Type: String
+    AllowedValues:
+      - ''
+      - 'private'
+      - 'public-read'
+      - 'public-read-write'
+      - 'authenticated-read'
+      - 'aws-exec-read'
+      - 'bucket-owner-read'
+      - 'bucket-owner-full-control'
+    Default: ''
+    Description: |
+      [Optional] Apply an access control list (ACL) on the file after it has been promoted or quarantined.
+      (Options: private, public-read, public-read-write, authenticated-read, aws-exec-read, bucket-owner-read, bucket-owner-full-control)
+
+Conditions:
+  IsScanOnGetObjectEnabled:
+    !Equals ['true', !Ref ScanOnGetObject]
+  PromoteEnabled:
+    !Not [!Equals [!Ref PromoteBucketName, '']]
+  QuarantineEnabled:
+    !Not [!Equals [!Ref QuarantineBucketName, '']]
+  PutACL:
+    !Not [!Equals [!Ref ACL, '']]
+
+Resources:
+  StorageStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AdditionalIAMPolicies: !Join [',', !Ref AdditionalIAMPolicies]
+        BucketListenerDLQARN: !Ref BucketListenerDLQARN
+        CloudOneRegion: !Ref CloudOneRegion
+        ExternalID: !Ref ExternalID
+        FSSBucketName: !Ref FSSBucketName
+        FSSKeyPrefix: !Ref FSSKeyPrefix
+        IAMPolicyPrefix: !Ref IAMPolicyPrefix
+        IAMRolePrefix: !Ref IAMRolePrefix
+        KMSKeyARNForBucketSSE: !Ref KMSKeyARNForBucketSSE
+        KMSKeyARNForDLQSSE: !Ref KMSKeyARNForDLQSSE
+        KMSKeyARNForQueueSSE: !Ref KMSKeyARNForQueueSSE
+        KMSKeyARNForTopicSSE: !Ref KMSKeyARNForTopicSSE
+        LambdaFunctionPrefix: !Ref LambdaFunctionPrefix
+        NetworkProxy: !Ref NetworkProxy
+        ObjectFilterPrefix: !Ref ObjectFilterPrefix
+        PermissionsBoundary: !Ref PermissionsBoundary
+        PostScanActionTagDLQARN: !Ref PostScanActionTagDLQARN
+        ReportObjectKey: !Ref ReportObjectKey
+        S3BucketToScan: !Ref S3BucketToScan
+        ScannerAWSAccount: !Ref AWS::AccountId
+        ScannerLambdaAliasARN: !GetAtt ScannerStack.Outputs.ScannerLambdaAliasARN
+        ScannerSQSURL: !GetAtt ScannerStack.Outputs.ScannerQueueURL
+        ScanOnGetObject: !Ref ScanOnGetObject
+        ScanResultTopicDLQARN: !Ref ScanResultTopicDLQARN
+        SecurityGroupIDs: !Join [',', !Ref SecurityGroupIDs]
+        SNSTopicPrefix: !Ref SNSTopicPrefix
+        SubnetIDs: !Join [',', !Ref SubnetIDs]
+        TrendMicroManagementAccount: !Ref TrendMicroManagementAccount
+        TriggerWithObjectCreatedEvent: !Ref TriggerWithObjectCreatedEvent
+      Tags:
+        - Key: Name
+          Value: FSS-Storage-Stack
+      TemplateURL:
+        Fn::Sub: https://${FSSBucketName}-${AWS::Region}.s3.${AWS::Region}.amazonaws.com/${FSSKeyPrefix}templates/FSS-Storage-Stack.template
+      TimeoutInMinutes: 30
+
+  ScannerStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AdditionalIAMPolicies: !Join [',', !Ref AdditionalIAMPolicies]
+        CloudOneRegion: !Ref CloudOneRegion
+        ExternalID: !Ref ExternalID
+        FSSBucketName: !Ref FSSBucketName
+        FSSKeyPrefix: !Ref FSSKeyPrefix
+        IAMPolicyPrefix: !Ref IAMPolicyPrefix
+        IAMRolePrefix: !Ref IAMRolePrefix
+        KMSKeyARNForQueueSSE: !Ref KMSKeyARNForQueueSSE
+        KMSKeyARNsForTopicSSE: !Ref KMSKeyARNForTopicSSE
+        LambdaFunctionPrefix: !Ref LambdaFunctionPrefix
+        LambdaLayerPrefix: !Ref LambdaLayerPrefix
+        NetworkProxy: !Ref NetworkProxy
+        PermissionsBoundary: !Ref PermissionsBoundary
+        ScannerEphemeralStorage: !Ref ScannerEphemeralStorage
+        SecurityGroupIDs: !Join [',', !Ref SecurityGroupIDs]
+        SQSQueuePrefix: !Ref SQSQueuePrefix
+        SubnetIDs: !Join [',', !Ref SubnetIDs]
+        TrendMicroManagementAccount: !Ref TrendMicroManagementAccount
+      Tags:
+        - Key: Name
+          Value: FSS-Scanner-Stack
+      TemplateURL:
+        Fn::Sub: https://${FSSBucketName}-${AWS::Region}.s3.${AWS::Region}.amazonaws.com/${FSSKeyPrefix}templates/FSS-Scanner-Stack.template
+      TimeoutInMinutes: 30
+
+  PluginStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: StorageStack
+    Properties:
+      Parameters:
+        ScanningBucketName: !Ref S3BucketToScan
+        ScanResultTopicARN: 
+          Fn::GetAtt:
+          - StorageStack
+          - Outputs.ScanResultTopicARN
+        PromoteBucketName: !Ref PromoteBucketName
+        PromoteMode: !Ref PromoteMode 
+        QuarantineBucketName: !Ref QuarantineBucketName
+        QuarantineMode: !Ref QuarantineMode
+        ACL: !Ref ACL
+      Tags:
+        - Key: Name
+          Value: FSS-Scanner-Stack
+      TemplateURL: https://aws-workshop-c1as-cft-templates.s3.amazonaws.com/p-q.yaml
+      TimeoutInMinutes: 30
+
+Outputs:
+  BucketListenerRoleARN:
+    Value: !GetAtt StorageStack.Outputs.BucketListenerRoleARN
+    Description: The ARNs of the lambda execution role for SQS in scanner stack to accept scan requests from.
+  CloudOneRegion:
+    Value: !Ref CloudOneRegion
+    Description: The region of the Trend Micro Cloud One services.
+  ScannerQueueURL:
+    Value: !GetAtt ScannerStack.Outputs.ScannerQueueURL
+    Description: The SQS URL for storage stacks to publish events to.
+  ScannerExecutionRoleARN:
+    Value: !GetAtt ScannerStack.Outputs.ScannerExecutionRoleARN
+    Description: The ARNs of the lambda execution role for Lambda in the scanner stack to execute scan requests.
+  ScannerStackManagementRoleARN:
+    Value: !GetAtt ScannerStack.Outputs.ScannerStackManagementRoleARN
+    Description: The ARN of the IAM role for File Storage Security backend services to manage the deployed resources.
+  ScanningBucket:
+    Value: !GetAtt StorageStack.Outputs.ScanningBucket
+    Description: The name of the scanning bucket in storage stack.
+  ScanOnGetObjectAccessPointARN:
+    Condition: IsScanOnGetObjectEnabled
+    Value: !GetAtt StorageStack.Outputs.ScanOnGetObjectAccessPointARN
+    Description: Using this ARN to get objects will have them scanned by File Storage Security before they are returned.
+  ScanResultTopicARN:
+    Value: !GetAtt StorageStack.Outputs.ScanResultTopicARN
+    Description: The ARN of the scan result SNS topic in storage stack.
+  StorageStackManagementRoleARN:
+    Value: !GetAtt StorageStack.Outputs.StorageStackManagementRoleARN
+    Description: The ARN of the IAM role for File Storage Security backend services to manage the deployed resources.
