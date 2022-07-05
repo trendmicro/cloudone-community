@@ -1,0 +1,10 @@
+# Do not include azure-functions-worker as it may conflict with the Azure Functions platform
+azure-cli==2.37.0
+azure-functions==1.7.2
+azure-storage-blob
+azure-identity ## azure-cli satisfies this requirement
+azure-mgmt-resource ## azure-cli satisfies this requirement
+azure-mgmt-storage==20.0.0
+urllib3==1.26.9
+argparse==1.4.0
+uuid7==0.1.0
