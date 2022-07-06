@@ -14,9 +14,15 @@ from datetime import datetime
 
 from yaml import scan
 
+from Deployer import Deployer
+
 import utils
 import locations
 import geographies
+import service_principal
+# import resource_groups
+# import rbac
+
 
 '''
 This script requires an additional text file for storage accounts to exclude, found in the "exclude.txt" file
@@ -66,8 +72,7 @@ def main():
         Note: All new blobs in the new Storage Account should be scanned by FSS as and when they are dumped in the Storage Account
     '''
 
-    subscription_id = get_subscription_id()
-    # print(str(subscription_id))
+    subscription_id = utils.get_subscription_id()
 
     azure_supported_locations_obj_by_geography_groups_dict = locations.get_azure_supported_locations()
 
@@ -79,24 +84,22 @@ def main():
     if deployment_mode == 'existing':
         deploy_storage_stack_list = get_storage_accounts(FSS_LOOKUP_TAG)
 
-        deploy_storage_stack_list = utils.apply_exclusions(exclusion_file_name, deploy_storage_stack_list)
-
-        deploy_fss_storage_stack(deploy_storage_stack_list)
+        if deploy_storage_stack_list:
+            deploy_storage_stack_list = utils.apply_exclusions(exclusion_file_name, deploy_storage_stack_list)
+            deploy_fss_storage_stack(subscription_id,deploy_storage_stack_list)
+        else:
+            raise Exception('No Storage Account(s) match the \"' + FSS_LOOKUP_TAG + '\" tag. Exiting ...')
     else:
         # deployment_mode == 'new'
         # TODO: Build an event listener to trigger deployment based on Storage Account creation events.
         raise Exception('Deploying to new storage account based on an event listener is yet to be built into this tool.')
 
-    if not deploy_storage_stack_list:
-        raise Exception('No Storage Account(s) match the ' + FSS_LOOKUP_TAG + ' tag. Exiting ...')
-    
     # FSS Scanner Stack Deployment
-
     deployment_model = utils.get_deployment_model_from_env('DEPLOYMENT_MODEL', DEPLOYMENT_MODELS, DEFAULT_DEPLOYMENT_MODEL)
 
     if deployment_model == 'geographies':
-        unique_geographies = geographies.get_geographies(deploy_storage_stack_list, azure_supported_locations_obj_by_geography_groups_dict)
-        deploy_fss_scanner_stack(unique_geographies)
+        unique_geographies = geographies.get_geographies_from_storage_accounts(deploy_storage_stack_list, azure_supported_locations_obj_by_geography_groups_dict)
+        deploy_fss_scanner_stack(subscription_id, unique_geographies)
 
     # credentials = DefaultAzureCredential(exclude_environment_credential=True)
     # resource_client = ResourceManagementClient(credentials, subscription_id)
@@ -105,9 +108,6 @@ def main():
     # for item in storage_client.storage_accounts.list():
     #     print_item(item)
 
-def get_subscription_id():
-    return os.environ.get('AZURE_SUBSCRIPTION_ID', '18cb46c3-ea58-41c2-8cc6-71d8662f1203') # your Azure Subscription Id
-
 # get_storage_accounts: Provides a list of all Azure Storage Accounts in this subscription with the Tag AutoDeployFSS = true
 def get_storage_accounts(FSS_LOOKUP_TAG):
 
@@ -115,21 +115,25 @@ def get_storage_accounts(FSS_LOOKUP_TAG):
 
     getStorageAccountsJSONResponse = utils.azure_cli_run_command(cliCommand)
 
-    print("\n\tTag Lookup: " + FSS_LOOKUP_TAG)
+    logging.info("\n\tTag Lookup: " + FSS_LOOKUP_TAG)
 
     deploy_storage_stack_list = []
 
-    for storageAccount in getStorageAccountsJSONResponse:
+    if getStorageAccountsJSONResponse:
 
-        if storageAccount["tags"]:
-            
-            if FSS_LOOKUP_TAG in storageAccount["tags"].keys():
+        for storageAccount in getStorageAccountsJSONResponse:
 
-                if storageAccount["tags"][FSS_LOOKUP_TAG]:
+            if storageAccount["tags"]:
+                
+                if FSS_LOOKUP_TAG in storageAccount["tags"].keys():
 
-                    deploy_storage_stack_list.append({"name": storageAccount["name"], "location": storageAccount["location"], "tags": storageAccount["tags"]})
-            
-    return deploy_storage_stack_list
+                    if storageAccount["tags"][FSS_LOOKUP_TAG]:
+
+                        deploy_storage_stack_list.append({"name": storageAccount["name"], "location": storageAccount["location"], "tags": storageAccount["tags"]})
+                
+        return deploy_storage_stack_list
+
+    return None
         
     # print(str(deploy_storage_stack_list))
 
@@ -137,24 +141,104 @@ def get_storage_accounts(FSS_LOOKUP_TAG):
     # credential = DefaultAzureCredential(exclude_environment_credential=True)
     # blob_service_client = BlobServiceClient(account_url=self.url, credential=credential)
 
-def deploy_fss_storage_stack(deploy_storage_stack_list):
+def deploy_fss_storage_stack(subscription_id, deploy_storage_stack_list):
 
     # File Storage Security Storage Stack deployment template can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Storage-Stack-Template.json
 
-    for storage_account in deploy_storage_stack_list:
+    app_id = utils.get_config_from_file("app_id")
+    cloud_one_region = utils.get_config_from_file("cloud_one_region")
 
-        storage_stack_name = "fss-storage-" + str(storage_account["name"]) + "-autodeploy"
+    if app_id and cloud_one_region:
 
-        print(storage_stack_name, str(storage_account))
+        for storage_account in deploy_storage_stack_list:
 
-def deploy_fss_scanner_stack(geography_groups):
+            storage_stack_name = "fss-storage-stack-" + str(storage_account["name"]) + str(storage_account["location"]) + "-autodeploy"
+            resource_group_name = storage_stack_name + "-rg"
+
+            # resource_group_name = resource_groups.create_resource_group(subscription_id, resource_group_name, storage_account["location"])
+
+            print(storage_stack_name, str(storage_account), resource_group_name)
+
+            msg = "\n\tInitializing the Deployer class with subscription id: {}, resource group: {}...\n"
+            msg = msg.format(subscription_id, resource_group_name)
+            print(msg)
+
+            service_principal_id = service_principal.query_service_principal(app_id)
+
+            if not service_principal_id:
+                service_principal_id = utils.azure_cli_run_command('ad sp create --id ' + app_id)
+            print(str(service_principal_id))
+            # rbac.createServicePrincipal()
+
+            storage_stack_params = {
+                'FileStorageSecurityServicePrincipalID': service_principal_id,
+                'CloudOneRegion': cloud_one_region,
+                'ScannerIdentityPrincipalID': '',
+                'ScannerQueueNamespace': '',
+                'BlobStorageAccountResourceID': '',
+                'BlobSystemTopicExist': 'No',
+                'BlobSystemTopicName': 'BlobEventTopic',
+                'UpdateScanResultToBlobMetadata': 'Yes',
+                'ReportObjectKey': 'No',
+                'StackPackageLocation': 'https://file-storage-security.s3.amazonaws.com',
+                'Version': 'latest',
+                'SharedAccessSignature': ''
+            }
+
+            # Initialize the deployer class
+            deployer = Deployer(subscription_id, resource_group_name, storage_stack_params)
+
+            print("Beginning the deployment... \n\n")
+            # Deploy the template
+            my_deployment = deployer.deploy(storage_account["location"], "storage")
+
+            print("Done deploying!!\n\n")
+
+def deploy_fss_scanner_stack(subscription_id, geography_groups):
 
     # File Storage Security Scanner Stack deployment templates can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Scanner-Stack-Template.json
 
-    for geography_group in geography_groups:
-    
-        scanner_stack_name = "fss-scanner-" + str(geography_group.lower()) + "-autodeploy"
-        print(scanner_stack_name)
+    app_id = utils.get_config_from_file("app_id")
+    cloud_one_region = utils.get_config_from_file("cloud_one_region")
+
+    if app_id and cloud_one_region:
+
+        for geography_group in geography_groups:
+        
+            scanner_stack_name = "fss-scanner-" + str(geography_group.lower()) + "-autodeploy"
+            resource_group_name = scanner_stack_name + "-rg"
+
+            azure_recommended_location = locations.get_azure_recommended_location_by_geography_group(geography_group, geography_groups)
+
+            # resource_group_name = resource_groups.create_resource_group(subscription_id, resource_group_name, azure_recommended_location)
+
+            msg = "\nInitializing the Deployer class with subscription id: {}, resource group: {}...\n\n"
+            msg = msg.format(subscription_id, resource_group_name)
+            print(msg)
+
+            service_principal_id = service_principal.query_service_principal(app_id)
+
+            if not service_principal_id:
+                service_principal_id = utils.azure_cli_run_command('ad sp create --id ' + app_id)
+            print(str(service_principal_id))
+            # rbac.createServicePrincipal()
+
+            scanner_stack_params = {
+                'FileStorageSecurityServicePrincipalID': service_principal_id,
+                'CloudOneRegion': cloud_one_region,
+                'StackPackageLocation': 'https://file-storage-security.s3.amazonaws.com',
+                'Version': 'latest',
+                'SharedAccessSignature': ''
+            }
+
+            # Initialize the deployer class
+            deployer = Deployer(subscription_id, resource_group_name, scanner_stack_params)
+
+            print("Beginning the deployment... \n\n")
+            # Deploy the template
+            my_deployment = deployer.deploy(azure_recommended_location, "scanner")
+
+            print("Done deploying!!\n\n")
 
 if __name__ == "__main__":
     main()

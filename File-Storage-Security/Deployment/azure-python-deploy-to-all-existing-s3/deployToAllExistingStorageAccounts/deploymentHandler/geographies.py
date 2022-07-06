@@ -1,4 +1,4 @@
-def get_geographies(deploy_storage_stack_list, az_supported_locations_obj_by_geography_groups_dict):
+def get_geographies_from_storage_accounts(deploy_storage_stack_list, az_supported_locations_obj_by_geography_groups_dict):
 
     unique_scanner_stack_list = []
 

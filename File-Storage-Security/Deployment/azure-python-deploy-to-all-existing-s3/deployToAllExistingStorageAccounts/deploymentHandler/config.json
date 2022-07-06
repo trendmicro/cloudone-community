@@ -1,0 +1,7 @@
+{
+    "app_id": "0ebb1eb3-5de1-4d7f-8cce-b04607c0c4dd",
+    "tenant_id": "e9d6e7b6-a143-44dd-9f92-8549870e2b4d",
+    "subscription_id": "52411634-d656-4c1f-b8fa-fc6c70544b0c",
+    "cloud_one_region": "us-1",
+    "keyvault_uri": "https://azurefsskeyvault.vault.azure.net/"
+}

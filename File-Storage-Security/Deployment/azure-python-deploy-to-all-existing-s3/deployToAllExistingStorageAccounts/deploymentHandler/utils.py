@@ -1,4 +1,5 @@
 import os
+import json
 from re import template
 from azure.cli.core import get_default_cli
 
@@ -38,7 +39,7 @@ def azure_cli_run_command(command):
         return cli.result.result
     elif cli.result.error:
         raise Exception(cli.result.error)
-    return True
+    return None
 
 # apply_exclusions - get list of storage accounts to exclude from deployment
 def apply_exclusions(filename, deploy_storage_stack_list):
@@ -70,3 +71,14 @@ def apply_exclusions(filename, deploy_storage_stack_list):
         return deploy_storage_stack_list
 
     return None
+
+def get_config_from_file(config_key):
+    f = open('config.json', 'r+')
+    json_object = json.loads(f.read())
+    if config_key in json_object.keys():
+        return str(json_object[config_key])
+    return ""
+
+def get_subscription_id():
+    azure_subscription_id = get_config_from_file('subscription_id')
+    return os.environ.get('AZURE_SUBSCRIPTION_ID', azure_subscription_id) # your Azure Subscription Id - 00000000-0000-0000-0000-000000000000

@@ -11,8 +11,11 @@ import os.path
 import json
 from uuid_extensions import uuid7str
 from azure.common.credentials import ServicePrincipalCredentials
+from azure.identity import DefaultAzureCredential
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.resource.resources.models import DeploymentMode
+
+import keyvault
 
 class Deployer(object):
     """ Initialize the deployer class with subscription, resource group and public key.
@@ -21,43 +24,48 @@ class Deployer(object):
     :raises KeyError: If AZURE_CLIENT_ID, AZURE_CLIENT_SECRET or AZURE_TENANT_ID env
         variables or not defined
     """
-    name_generator = uuid7str().split('-')[-1]
 
-    def __init__(self, subscription_id, resource_group, pub_ssh_key_path='~/.ssh/id_rsa.pub'):
+    def __init__(self, subscription_id, resource_group_name, storage_stack_params):
         self.subscription_id = subscription_id
-        self.resource_group = resource_group
-        self.dns_label_prefix = self.name_generator.haikunate()
+        self.resource_group_name = resource_group_name
+        self.credentials = DefaultAzureCredential(exclude_environment_credential=False)
 
-        pub_ssh_key_path = os.path.expanduser(pub_ssh_key_path)
-        # Will raise if file not exists or not enough permission
-        with open(pub_ssh_key_path, 'r') as pub_ssh_file_fd:
-            self.pub_ssh_key = pub_ssh_file_fd.read()
+        print(str(keyvault.get_secret_from_keyvault('FSS-AUTODEPLOY-CLIENT-ID')), str(keyvault.get_secret_from_keyvault('FSS-AUTODEPLOY-CLIENT-SECRET')))
 
-        self.credentials = ServicePrincipalCredentials(
-            client_id=os.environ['AZURE_CLIENT_ID'],
-            secret=os.environ['AZURE_CLIENT_SECRET'],
-            tenant=os.environ['AZURE_TENANT_ID']
-        )
+        # print(str(os.environ['AZURE_CLIENT_ID']), str(os.environ['AZURE_CLIENT_SECRET']), str(os.environ['AZURE_TENANT_ID']))
+
+        # self.credentials = ServicePrincipalCredentials(
+        #     client_id=os.environ['AZURE_CLIENT_ID'],
+        #     secret=os.environ['AZURE_CLIENT_SECRET'],
+        #     tenant=os.environ['AZURE_TENANT_ID']
+        # )
         self.client = ResourceManagementClient(self.credentials, self.subscription_id)
 
-    def deploy(self):
+    def deploy(self, azure_location, stack_type, stack_params={}):
         """Deploy the template to a resource group."""
         self.client.resource_groups.create_or_update(
-            self.resource_group,
+            self.resource_group_name,
             {
-                'location':'westus'
+                'location': azure_location
             }
         )
 
-        template_path = os.path.join(os.path.dirname(__file__), 'templates', 'template.json')
+        template_file_name = None
+        if stack_type == "scanner":
+            template_file_name = "FSS-Scanner-Stack-Template.json"
+        elif stack_type == "storage":
+            template_file_name = "FSS-Storage-Stack-Template.json"
+
+        template_path = os.path.join(os.path.dirname(__file__), 'templates', template_file_name)
         with open(template_path, 'r') as template_file_fd:
             template = json.load(template_file_fd)
 
+        print("\n\n\nTemplate - \n\n\t" + str(template))
+
         parameters = {
-            'sshKeyData': self.pub_ssh_key,
-            'vmName': 'azure-deployment-sample-vm',
-            'dnsLabelPrefix': self.dns_label_prefix
+            'vmName': 'azure-deployment-sample-vm'
         }
+        parameters.update(stack_params)
         parameters = {k: {'value': v} for k, v in parameters.items()}
 
         deployment_properties = {
@@ -67,12 +75,12 @@ class Deployer(object):
         }
 
         deployment_async_operation = self.client.deployments.create_or_update(
-            self.resource_group,
-            'azure-sample',
+            self.resource_group_name,
+            self.resource_group_name + '-deployment',
             deployment_properties
         )
         deployment_async_operation.wait()
 
     def destroy(self):
         """Destroy the given resource group"""
-        self.client.resource_groups.delete(self.resource_group)
+        self.client.resource_groups.delete(self.resource_group_name)
