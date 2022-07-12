@@ -9,3 +9,4 @@ azure-keyvault-secrets==4.4.0
 urllib3==1.26.9
 argparse==1.4.0
 uuid7==0.1.0
+munch==2.5.0

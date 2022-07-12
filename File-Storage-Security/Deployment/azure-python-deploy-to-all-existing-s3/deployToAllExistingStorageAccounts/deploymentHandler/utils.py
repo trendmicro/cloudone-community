@@ -1,7 +1,11 @@
+from distutils.command.config import config
 import os
 import json
 from re import template
 from azure.cli.core import get_default_cli
+# from munch import DefaultMunch 
+
+import cloudone_fss_api
 
 # compose_tags: Adds the FSSMonitored tag to the Storage Account(s) that are monitored by Trend Micro File Storage Security
 def compose_tags(existing_tags, FSS_MONITORED_TAG):
@@ -26,8 +30,9 @@ def get_deployment_model_from_env(model_key, DEPLOYMENT_MODELS, DEFAULT_DEPLOYME
     model = os.environ.get(model_key, 'geographies').lower()
     return model if model in DEPLOYMENT_MODELS else DEFAULT_DEPLOYMENT_MODEL
 
-def get_blob_account_url(file_url):
-    return '/'.join(file_url.split('/')[0:3])
+# def get_blob_account_url(file_url):
+#     return '/'.join(file_url.split('/')[0:3])
+
 
 def azure_cli_run_command(command):
     args = command.split()
@@ -49,7 +54,7 @@ def apply_exclusions(filename, deploy_storage_stack_list):
         content = []
         with open(filename) as f:
             content = f.read().splitlines()
-        
+
         temp_list = []
         for storage_account_name in content:
             for storage_account in deploy_storage_stack_list:
@@ -72,13 +77,66 @@ def apply_exclusions(filename, deploy_storage_stack_list):
 
     return None
 
+# # Convert all Dict keys into a list for set-issubset checks
+# def get_all_keys(dict):
+#     for key, value in dict.items():
+#         yield key
+#         if isinstance(value, dict):
+#             yield from get_all_keys(value)
+
 def get_config_from_file(config_key):
-    f = open('config.json', 'r+')
-    json_object = json.loads(f.read())
-    if config_key in json_object.keys():
-        return str(json_object[config_key])
+
+    with open('config.json', 'r+') as f:
+        json_object = json.loads(f.read())
+
+    # # Accessing Dict with Object notation for complex queries, using Munch
+    # if "." in config_key:
+    #     # d = AttrDict(json_object)
+    #     # print(dir(d))
+    #     # print(d.)
+    #     # return d
+
+    #     d = DefaultMunch.fromDict(json_object)
+    #     print("Munch: " + str(d[config_key]))
+    #     return d[config_key]
+
+    if json_object[config_key]:
+        return json_object[config_key]
     return ""
 
+def get_cloudone_region():
+    cloudone_config = get_config_from_file('cloudone')
+    if cloudone_config['region']:
+        return cloudone_config['region']
+    return None
+
+def get_cloudone_api_key():
+    cloudone_config = get_config_from_file('cloudone')
+    if cloudone_config['api_key']:
+        return cloudone_config['api_key']
+    return None
+
 def get_subscription_id():
-    azure_subscription_id = get_config_from_file('subscription_id')
-    return os.environ.get('AZURE_SUBSCRIPTION_ID', azure_subscription_id) # your Azure Subscription Id - 00000000-0000-0000-0000-000000000000
+    azure_subscription_id = str(get_config_from_file('subscription_id'))
+    # your Azure Subscription Id - 00000000-0000-0000-0000-000000000000
+    return os.environ.get('AZURE_SUBSCRIPTION_ID', azure_subscription_id)
+
+def remove_storage_accounts_with_storage_stacks(storage_account_list):
+
+    storage_stack_list = cloudone_fss_api.get_storage_stacks()
+
+    temp_list = []
+
+    for storage_account in storage_account_list:
+        
+        for storage_stack in storage_stack_list["stacks"]:
+
+            if storage_account["name"] == storage_stack["storage"]:
+
+                temp_list.append(storage_account)
+
+    for storage_account in temp_list:
+
+        storage_account_list.pop(storage_account)
+
+    return storage_account_list

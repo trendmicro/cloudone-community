@@ -2,6 +2,9 @@
     "app_id": "0ebb1eb3-5de1-4d7f-8cce-b04607c0c4dd",
     "tenant_id": "e9d6e7b6-a143-44dd-9f92-8549870e2b4d",
     "subscription_id": "52411634-d656-4c1f-b8fa-fc6c70544b0c",
-    "cloud_one_region": "us-1",
-    "keyvault_uri": "https://azurefsskeyvault.vault.azure.net/"
+    "keyvault_uri": "https://azurefsskeyvault.vault.azure.net/",
+    "cloudone":{
+        "region": "ca-1",
+        "api_key": "tmc129irWJ86IyNamYxyXBCa77hxWCH:53CLgfad7Q2rFHGSXy1qZqaLbzF7dNnwjnsgWAYeteoVg64haZyYFMNZPp7pea7qGg"
+    }
 }

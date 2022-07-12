@@ -6,8 +6,8 @@ import utils
 
 def createServicePrincipal():
 
-    tenant_id = utils.get_config_from_file("tenant_id")
-    app_id = utils.get_config_from_file("app_id")
+    tenant_id = str(utils.get_config_from_file("tenant_id"))
+    app_id = str(utils.get_config_from_file("app_id"))
     credentials = DefaultAzureCredential(exclude_environment_credential=False)
 
     if tenant_id and credentials and app_id:
