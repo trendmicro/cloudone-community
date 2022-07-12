@@ -1,3 +1,6 @@
+from azure.mgmt.subscription import SubscriptionClient
+from azure.identity import DefaultAzureCredential
+
 import utils
 import random
 
@@ -37,6 +40,41 @@ def get_azure_recommended_locations_list_by_geography_groups():
 # get_azure_supported_locations - Lists all supported locations for Azure in the current subscription.
 def get_azure_supported_locations():
     az_locations_list = utils.azure_cli_run_command('account list-locations')
+
+    az_supported_locations_obj_by_geography_groups = {}
+
+    for az_location in az_locations_list:
+        if az_location["metadata"]["geographyGroup"] and az_location["metadata"]["geographyGroup"] not in az_supported_locations_obj_by_geography_groups.keys():
+            az_supported_locations_obj_by_geography_groups.update({az_location["metadata"]["geographyGroup"]: []})
+        elif not az_location["metadata"]["geographyGroup"]:
+            az_supported_locations_obj_by_geography_groups.update({"Logical": []})
+
+    for az_location in az_locations_list:
+        if az_location["metadata"]["regionType"] == "Physical":
+            az_supported_locations_obj_by_geography_groups[az_location["metadata"]["geographyGroup"]].append(az_location)
+        else:
+            az_supported_locations_obj_by_geography_groups["Logical"].append(az_location)
+
+    return az_supported_locations_obj_by_geography_groups
+
+
+# get_azure_supported_locations - Lists all supported locations for Azure in the current subscription.
+def get_azure_supported_locations_sdk():
+
+    # self.credentials =  ServicePrincipalCredentials(
+    #                         client_id=client_id,
+    #                         secret=access_secret_key,
+    #                         tenant=tenant)
+
+    credentials = DefaultAzureCredential(exclude_environment_credential=False)
+    subscription_client = SubscriptionClient(credentials)
+
+    subscription_id = utils.get_subscription_id()
+
+    az_locations_list = subscription_client.subscriptions.list_locations(subscription_id)
+    
+    for location in az_locations_list:
+        print(location.name)
 
     az_supported_locations_obj_by_geography_groups = {}
 

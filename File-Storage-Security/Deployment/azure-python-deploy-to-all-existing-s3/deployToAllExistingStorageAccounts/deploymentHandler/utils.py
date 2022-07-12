@@ -1,7 +1,6 @@
-from distutils.command.config import config
 import os
 import json
-from re import template
+
 from azure.cli.core import get_default_cli
 # from munch import DefaultMunch 
 
@@ -32,7 +31,6 @@ def get_deployment_model_from_env(model_key, DEPLOYMENT_MODELS, DEFAULT_DEPLOYME
 
 # def get_blob_account_url(file_url):
 #     return '/'.join(file_url.split('/')[0:3])
-
 
 def azure_cli_run_command(command):
     args = command.split()
@@ -111,9 +109,18 @@ def get_cloudone_region():
     return None
 
 def get_cloudone_api_key():
+
     cloudone_config = get_config_from_file('cloudone')
     if cloudone_config['api_key']:
         return cloudone_config['api_key']
+    if 'CLOUDONE_API_KEY' in os.environ.keys():
+        return os.environ.get('CLOUDONE_API_KEY')
+    return None
+
+def get_cloudone_max_storage_to_scanner_count():
+    cloudone_config = get_config_from_file('cloudone')
+    if cloudone_config['max_storage_stack_per_scanner_stack']:
+        return cloudone_config['max_storage_stack_per_scanner_stack']
     return None
 
 def get_subscription_id():

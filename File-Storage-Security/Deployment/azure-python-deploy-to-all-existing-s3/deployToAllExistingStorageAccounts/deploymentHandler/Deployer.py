@@ -28,17 +28,17 @@ class Deployer(object):
     def __init__(self, subscription_id, resource_group_name, storage_stack_params):
         self.subscription_id = subscription_id
         self.resource_group_name = resource_group_name
-        self.credentials = DefaultAzureCredential(exclude_environment_credential=False)
+        # self.credentials = DefaultAzureCredential(exclude_environment_credential=False)
 
-        print(str(keyvault.get_secret_from_keyvault('FSS-AUTODEPLOY-CLIENT-ID')), str(keyvault.get_secret_from_keyvault('FSS-AUTODEPLOY-CLIENT-SECRET')))
+        # print("\nClient ID : " + str(keyvault.get_secret_from_keyvault('FSS-AUTODEPLOY-CLIENT-ID')) + "\nClient Secret : " +  str(keyvault.get_secret_from_keyvault('FSS-AUTODEPLOY-CLIENT-SECRET')))
 
-        # print(str(os.environ['AZURE_CLIENT_ID']), str(os.environ['AZURE_CLIENT_SECRET']), str(os.environ['AZURE_TENANT_ID']))
+        print(str(os.environ['AZURE_CLIENT_ID']), str(os.environ['AZURE_CLIENT_SECRET']), str(os.environ['AZURE_TENANT_ID']))
 
-        # self.credentials = ServicePrincipalCredentials(
-        #     client_id=os.environ['AZURE_CLIENT_ID'],
-        #     secret=os.environ['AZURE_CLIENT_SECRET'],
-        #     tenant=os.environ['AZURE_TENANT_ID']
-        # )
+        self.credentials = ServicePrincipalCredentials(
+            client_id=os.environ['AZURE_CLIENT_ID'],
+            secret=os.environ['AZURE_CLIENT_SECRET'],
+            tenant=os.environ['AZURE_TENANT_ID']
+        )
         self.client = ResourceManagementClient(self.credentials, self.subscription_id)
 
     def deploy(self, azure_location, stack_type, stack_params={}):
