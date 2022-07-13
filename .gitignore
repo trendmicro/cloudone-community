@@ -7,6 +7,9 @@
 ## Files to be ignored start here
 **/__pycache__
 
+## VSCode files
+**/.vscode
+
 ## macOS files
 **/.DS_Store
 
