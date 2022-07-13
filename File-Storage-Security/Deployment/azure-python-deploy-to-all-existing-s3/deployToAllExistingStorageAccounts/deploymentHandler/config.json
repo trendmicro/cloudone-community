@@ -8,7 +8,7 @@
         "api_key": "",
         "max_storage_stack_per_scanner_stack": 50
     },
-    "azure": {
+    "azure_creds": {
         "key": "",
         "secret": ""
     }
