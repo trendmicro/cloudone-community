@@ -3,7 +3,7 @@ from azure.identity import DefaultAzureCredential
 from azure.common.credentials import ServicePrincipalCredentials
 from azure.identity import ClientSecretCredential
 
-import osq
+import os
 import utils
 import random
 
