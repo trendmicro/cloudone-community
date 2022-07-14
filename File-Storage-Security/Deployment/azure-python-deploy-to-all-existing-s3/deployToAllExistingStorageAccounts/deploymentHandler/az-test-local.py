@@ -1,7 +1,4 @@
-from distutils import dep_util
 import logging
-import os
-# import json
 
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
@@ -24,9 +21,9 @@ import storage_accounts
 import service_principal
 import cloudone_fss_api
 
+# TODO: Remove unused code and dependencies
 # import resource_groups
 # import rbac
-
 
 '''
 This script requires an additional text file for storage accounts to exclude, found in the "exclude.txt" file
@@ -83,8 +80,6 @@ def main():
 
     subscription_id = utils.get_subscription_id()
 
-    # locations.get_azure_supported_locations_sdk()
-
     azure_supported_locations_obj_by_geography_groups_dict = locations.get_azure_supported_locations()
 
     # Get List of Storage Accounts to deploy FSS
@@ -95,12 +90,16 @@ def main():
         deploy_storage_stack_list = storage_accounts.get_storage_accounts(FSS_LOOKUP_TAG)
 
         if deploy_storage_stack_list:
-            deploy_storage_stack_list = utils.apply_exclusions(exclusion_file_name, deploy_storage_stack_list)
+            deploy_storage_stack_list = utils.apply_exclusions(exclusion_file_name, deploy_storage_stack_list)            
+        else:
+            raise Exception('No Storage Account(s) match the \"' + FSS_LOOKUP_TAG + '\" tag. Exiting ...')
+
+        if deploy_storage_stack_list:
             deploy_storage_stack_list = utils.remove_storage_accounts_with_storage_stacks(deploy_storage_stack_list)
         else:
             raise Exception('No Storage Account(s) match the \"' + FSS_LOOKUP_TAG + '\" tag. Exiting ...')
-    else:
-        # deployment_mode == 'new'
+
+    else: # deployment_mode == 'new'        
         # # TODO: Build an event listener to trigger deployment based on Storage Account creation events.
         raise Exception('Deploying to new storage account based on an event listener is yet to be built into this tool.')
 
@@ -113,29 +112,35 @@ def main():
         # unique_storage_account_geographies = geographies.get_geographies_from_storage_accounts(deploy_storage_stack_list, azure_supported_locations_obj_by_geography_groups_dict)
 
         # Scanner Stack Map
-        scanner_stacks_map_by_geographies_dict = geographies.build_geographies_map_dict()        
+        scanner_stacks_map_by_geographies_dict = geographies.build_geographies_map_dict()  
 
+        # Storage Stacks Map
+        storage_stacks_map_by_geographies_dict = geographies.build_geographies_map_dict()      
+
+        # Populate the Scanner stack map by geographies
         # Inventory of existing FSS scanner stacks by Azure location
-        existing_scanner_stacks_by_location = cloudone_fss_api.map_scanner_stacks_to_azure_locations()
+        existing_scanner_stacks_by_location = cloudone_fss_api.map_scanner_stacks_to_azure_locations()        
 
-        print("\nScanner Stack Locations: " + str(existing_scanner_stacks_by_location))
+        if existing_scanner_stacks_by_location:
 
-        # Fetching Geography groups for the existing storage stacks, building a map
-        
-        # for existing_scanner_stack_location in existing_scanner_stacks_by_location:
+            print("\nScanner Stack Locations: " + str(existing_scanner_stacks_by_location))
 
-            # geography = geographies.get_geography_group_from_location(existing_scanner_stack_location, azure_supported_locations_obj_by_geography_groups_dict)
+            # Fetching Geography groups for the existing storage stacks, building a map
+            
+            # for existing_scanner_stack_location in existing_scanner_stacks_by_location:
 
-            # if geography not in scanner_stacks_map_by_geographies_dict:
-            #     scanner_stacks_map_by_geographies_dict.update({geography: []}) # { "US": [], "Europe" [], ...} only existing scanner stack in the azure location
+                # geography = geographies.get_geography_group_from_location(existing_scanner_stack_location, azure_supported_locations_obj_by_geography_groups_dict)
 
-        # print("\nAll Geos where scanner stack exists: " + str(scanner_stacks_map_by_geographies_dict))
+                # if geography not in scanner_stacks_map_by_geographies_dict:
+                #     scanner_stacks_map_by_geographies_dict.update({geography: []}) # { "US": [], "Europe" [], ...} only existing scanner stack in the azure location
 
-        for existing_scanner_stack_by_location in existing_scanner_stacks_by_location:
+            # print("\nAll Geos where scanner stack exists: " + str(scanner_stacks_map_by_geographies_dict))
 
-            geography = geographies.get_geography_group_from_location(existing_scanner_stack_by_location, azure_supported_locations_obj_by_geography_groups_dict)
+            for existing_scanner_stack_by_location in existing_scanner_stacks_by_location:
 
-            scanner_stacks_map_by_geographies_dict[geography] = existing_scanner_stacks_by_location[existing_scanner_stack_by_location]
+                scanner_stack_geography = geographies.get_geography_group_from_location(existing_scanner_stack_by_location, azure_supported_locations_obj_by_geography_groups_dict)
+
+                scanner_stacks_map_by_geographies_dict[scanner_stack_geography] = existing_scanner_stacks_by_location[existing_scanner_stack_by_location]
 
         # ----
 
@@ -182,45 +187,52 @@ def main():
 
         # ----        
 
-        # Storage Stacks Map
-        storage_stacks_map_by_geographies_dict = geographies.build_geographies_map_dict()        
-
+        # Populate the Storage stack map by geographies
         for storage_account in deploy_storage_stack_list:
 
-            for existing_scanner_stack_by_location in existing_scanner_stacks_by_location:
+            if existing_scanner_stacks_by_location:
 
-                # if "storageStacks" not in existing_scanner_stacks_by_location[existing_scanner_stack_by_location][0].keys():
+                for existing_scanner_stack_by_location in existing_scanner_stacks_by_location:
 
-                #         existing_scanner_stacks_by_location[existing_scanner_stack_by_location][0]["storageStacks"] = []                
+                    # if "storageStacks" not in existing_scanner_stacks_by_location[existing_scanner_stack_by_location][0].keys():
 
-                existing_scanner_stack_geography = geographies.get_geography_group_from_location(existing_scanner_stacks_by_location[existing_scanner_stack_by_location][0]["details"]["region"], azure_supported_locations_obj_by_geography_groups_dict)
+                    #         existing_scanner_stacks_by_location[existing_scanner_stack_by_location][0]["storageStacks"] = []
+
+                    existing_scanner_stack_geography = geographies.get_geography_group_from_location(existing_scanner_stacks_by_location[existing_scanner_stack_by_location][0]["details"]["region"], azure_supported_locations_obj_by_geography_groups_dict)
+                    storage_account_geography = geographies.get_geography_group_from_location(storage_account["location"], azure_supported_locations_obj_by_geography_groups_dict)
+
+                    if existing_scanner_stack_geography == storage_account_geography:
+
+                        temp_storage_stacks_dict = storage_stacks_map_by_geographies_dict[existing_scanner_stack_geography]                    
+
+                        temp_storage_stacks_dict.append(storage_account)
+
+                        storage_stacks_map_by_geographies_dict[existing_scanner_stack_geography] = temp_storage_stacks_dict
+
+                        print("\nFound a match... " + str(existing_scanner_stack_geography) + " = " + str(storage_account_geography))
+
+                    else:
+                        print("\nFound a mismatch... " + str(existing_scanner_stack_geography) + " ~ " + str(storage_account_geography))
+            else:
                 storage_account_geography = geographies.get_geography_group_from_location(storage_account["location"], azure_supported_locations_obj_by_geography_groups_dict)
 
-                if existing_scanner_stack_geography == storage_account_geography:
+                temp_storage_stacks_dict = storage_stacks_map_by_geographies_dict[storage_account_geography]                    
 
-                    temp_storage_stacks_dict = storage_stacks_map_by_geographies_dict[existing_scanner_stack_geography]                    
+                temp_storage_stacks_dict.append(storage_account)
 
-                    temp_storage_stacks_dict.append(storage_account)
-
-                    storage_stacks_map_by_geographies_dict[existing_scanner_stack_geography] = temp_storage_stacks_dict
-
-                    print("\nFound a match... " + str(existing_scanner_stack_geography) + " = " + str(storage_account_geography))
-
-                else:
-                    print("\nFound a mismatch... " + str(existing_scanner_stack_geography) + " ~ " + str(storage_account_geography))
+                storage_stacks_map_by_geographies_dict[storage_account_geography] = temp_storage_stacks_dict
 
         print("\nscanner_stacks_map_by_geographies_dict - " + str(scanner_stacks_map_by_geographies_dict) + "\n")
-        print("\nstorage_stacks_map_by_geographies_dict - " + str(storage_stacks_map_by_geographies_dict) + "\n")
+        print("\nstorage_stacks_map_by_geographies_dict - " + str(storage_stacks_map_by_geographies_dict) + "\n")        
 
-    # print(str(cloudone_fss_api.get))
-    
-    # Deploy FSS Scanner Stacks for the different geographies we have storage accounts
-    deploy_fss_scanner_stack(subscription_id, scanner_stacks_map_by_geographies_dict, storage_stacks_map_by_geographies_dict) # Subscription Id, Existing Scanner stacks so we dont recreate one for the geography, list of geographies we need Scanner stacks in (might overlap with existing), storage accounts that exist without a scanner-storage stack
+        # Scanner and Storage Stack Maps are built. Now, let's deploy.            
+        # Deploy FSS Scanner Stacks for the different geographies we have storage accounts
+        deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, scanner_stacks_map_by_geographies_dict, storage_stacks_map_by_geographies_dict) # TODO: Fix this description. Subscription Id, Existing Scanner stacks so we dont recreate one for the geography, list of geographies we need Scanner stacks in (might overlap with existing), storage accounts that exist without a scanner-storage stack
 
-    # # FSS Storage Stack Deployment
-    # deploy_fss_storage_stack(subscription_id,  deploy_storage_stack_list)
+        # # FSS Storage Stack Deployment
+        # deploy_fss_storage_stack(subscription_id,  deploy_storage_stack_list)
 
-def deploy_fss_scanner_stack(subscription_id, scanner_stacks_map_by_geographies_dict, storage_stacks_map_by_geographies_dict):
+def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, scanner_stacks_map_by_geographies_dict, storage_stacks_map_by_geographies_dict):
 
     # File Storage Security Scanner Stack deployment templates can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Scanner-Stack-Template.json
 
@@ -229,7 +241,7 @@ def deploy_fss_scanner_stack(subscription_id, scanner_stacks_map_by_geographies_
 
     if app_id and cloudone_region:
 
-        print("\n\tDeploying Scanner Stack - " + str(scanner_stacks_map_by_geographies_dict), " \n\n\t+++++ ", str(storage_stacks_map_by_geographies_dict))
+        print("\n\tDeploying Scanner Stack - " + str(scanner_stacks_map_by_geographies_dict), " \n\n\t+++++ Storage Stack - ", str(storage_stacks_map_by_geographies_dict))
 
         # Starting with the geography-based scanner requirements
         for geography_group in scanner_stacks_map_by_geographies_dict:
@@ -239,22 +251,19 @@ def deploy_fss_scanner_stack(subscription_id, scanner_stacks_map_by_geographies_
                 scanner_stack_name = "fss-scanner-" + str(geography_group.lower()) + "-autodeploy"
                 resource_group_name = scanner_stack_name + "-rg"
 
-                # Find a recommended Azure location to deploy the FSS Scanner Stack
-                azure_recommended_location = locations.get_azure_recommended_location_by_geography_group(geography_group, scanner_stacks_map_by_geographies_dict)
+                # Find a recommended Azure location to deploy the FSS Scanner Stack                
+                azure_recommended_location = locations.get_azure_recommended_location_by_geography_group(geography_group, azure_supported_locations_obj_by_geography_groups_dict) # 
 
-                print("\nCreating a new Scanner Stack in Azure location {azure_recommended_location} - {geography_group}\n".format(azure_recommended_location, geography_group))
+                print("\nCreating a new Scanner Stack in Azure location {} - {}\n".format(azure_recommended_location, geography_group))
 
                 # resource_group_name = resource_groups.create_resource_group(subscription_id, resource_group_name, azure_recommended_location)
 
-                msg = "\nInitializing the Deployer class with subscription id: {}, resource group: {}...\n\n"
-                msg = msg.format(subscription_id, resource_group_name)
-                print(msg)
+                print("\nInitializing the Deployer class with subscription id: {}, resource group: {} ...\n\n".format(subscription_id, resource_group_name))
 
                 service_principal_id = service_principal.query_service_principal(app_id)
 
                 if not service_principal_id:
-                    service_principal_id = utils.azure_cli_run_command('ad sp create --id ' + app_id)
-                print(str(service_principal_id))
+                    service_principal_id = utils.azure_cli_run_command('ad sp create --id ' + app_id)                
                 # rbac.createServicePrincipal()
 
                 scanner_stack_params = {
@@ -265,18 +274,20 @@ def deploy_fss_scanner_stack(subscription_id, scanner_stacks_map_by_geographies_
                     'SharedAccessSignature': ''
                 }
 
-                # Initialize the deployer class
-                deployer = Deployer(subscription_id, resource_group_name, scanner_stack_params)
+                print("scanner_stack_params - " + str(scanner_stack_params))
 
-                print("Beginning the deployment... \n\n")
+                # Initialize the deployer class
+                deployer = Deployer(subscription_id, resource_group_name)
+
+                print("Beginning the deployment...")
                 # Deploy the template
-                my_deployment = deployer.deploy(azure_recommended_location, "scanner")
+                my_deployment = deployer.deploy(azure_recommended_location, "scanner", scanner_stack_params)
 
                 print("Done deploying!!\n\n")
 
             else:
                 # A Scanner stack for this storage account location has been identified
-                print("\nFound " + str(geography_group) + " - " + str(scanner_stacks_map_by_geographies_dict[geography_group]) + " ...\n")                
+                print("Found " + str(geography_group) + " - " + str(scanner_stacks_map_by_geographies_dict[geography_group]) + " ...")                
 
                 for scanner_stack in scanner_stacks_map_by_geographies_dict[geography_group]:
 
@@ -284,16 +295,17 @@ def deploy_fss_scanner_stack(subscription_id, scanner_stacks_map_by_geographies_
 
                         resource_group_name = scanner_stack["name"].lower() + "-rg"
 
+                        azure_recommended_location = scanner_stack["details"]["region"]
+
+                        print("\nAdding to an existing Scanner Stack in Azure location {} - {}\n".format(azure_recommended_location, geography_group))
+
                         # --- Repeat steps TODO: Remove repitition and create a function
-                        msg = "\nInitializing the Deployer class with subscription id: {}, resource group: {} ...\n\n"
-                        msg = msg.format(subscription_id, resource_group_name)
-                        print(msg)
+                        print("\nInitializing the Deployer class with subscription id: {}, resource group: {} ...\n\n".format(subscription_id, resource_group_name))
 
                         service_principal_id = service_principal.query_service_principal(app_id)
 
                         if not service_principal_id:
-                            service_principal_id = utils.azure_cli_run_command('ad sp create --id ' + app_id)
-                        print(str(service_principal_id))
+                            service_principal_id = utils.azure_cli_run_command('ad sp create --id ' + app_id)                        
                         # rbac.createServicePrincipal()
 
                         scanner_stack_params = {
@@ -305,66 +317,64 @@ def deploy_fss_scanner_stack(subscription_id, scanner_stacks_map_by_geographies_
                         }
 
                         # Initialize the deployer class
-                        deployer = Deployer(subscription_id, resource_group_name, scanner_stack_params)
+                        deployer = Deployer(subscription_id, resource_group_name)
 
-                        print("Beginning the deployment... \n\n")
+                        print("Beginning the deployment...")
                         # Deploy the template
-                        my_deployment = deployer.deploy(azure_recommended_location, "scanner")
+                        my_deployment = deployer.deploy(azure_recommended_location, "scanner", scanner_stack_params)
 
                         print("Done deploying!!\n\n")
 
-def deploy_fss_storage_stack(subscription_id, deploy_storage_stack_list):
+# def deploy_fss_storage_stack(subscription_id, deploy_storage_stack_list):
 
-    # File Storage Security Storage Stack deployment template can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Storage-Stack-Template.json
+#     # File Storage Security Storage Stack deployment template can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Storage-Stack-Template.json
 
-    app_id = str(utils.get_config_from_file("app_id"))
-    cloudone_region = str(utils.get_cloudone_region())
+#     app_id = str(utils.get_config_from_file("app_id"))
+#     cloudone_region = str(utils.get_cloudone_region())
 
-    if app_id and cloudone_region:
+#     if app_id and cloudone_region:
 
-        for storage_account in deploy_storage_stack_list:
+#         for storage_account in deploy_storage_stack_list:
 
-            storage_stack_name = "fss-storage-stack-" + str(storage_account["name"]) + str(storage_account["location"]) + "-autodeploy"
-            resource_group_name = storage_stack_name + "-rg"
+#             storage_stack_name = "fss-storage-stack-" + str(storage_account["name"]) + str(storage_account["location"]) + "-autodeploy"
+#             resource_group_name = storage_stack_name + "-rg"
 
-            # resource_group_name = resource_groups.create_resource_group(subscription_id, resource_group_name, storage_account["location"])
+#             # resource_group_name = resource_groups.create_resource_group(subscription_id, resource_group_name, storage_account["location"])
 
-            print(storage_stack_name, str(storage_account), resource_group_name)
+#             print(storage_stack_name, str(storage_account), resource_group_name)
 
-            msg = "\n\tInitializing the Deployer class with subscription id: {}, resource group: {}...\n"
-            msg = msg.format(subscription_id, resource_group_name)
-            print(msg)
+#             print("\nInitializing the Deployer class with subscription id: {}, resource group: {}...\n".format(subscription_id, resource_group_name))
 
-            service_principal_id = service_principal.query_service_principal(app_id)
+#             service_principal_id = service_principal.query_service_principal(app_id)
 
-            if not service_principal_id:
-                service_principal_id = utils.azure_cli_run_command('ad sp create --id ' + app_id)
-            print(str(service_principal_id))
-            # rbac.createServicePrincipal()
+#             if not service_principal_id:
+#                 service_principal_id = utils.azure_cli_run_command('ad sp create --id ' + app_id)
+#             print(str(service_principal_id))
+#             # rbac.createServicePrincipal()
 
-            storage_stack_params = {
-                'FileStorageSecurityServicePrincipalID': service_principal_id,
-                'CloudOneRegion': cloudone_region,
-                'ScannerIdentityPrincipalID': '',
-                'ScannerQueueNamespace': '',
-                'BlobStorageAccountResourceID': '',
-                'BlobSystemTopicExist': 'No',
-                'BlobSystemTopicName': 'BlobEventTopic',
-                'UpdateScanResultToBlobMetadata': 'Yes',
-                'ReportObjectKey': 'No',
-                'StackPackageLocation': 'https://file-storage-security.s3.amazonaws.com',
-                'Version': 'latest',
-                'SharedAccessSignature': ''
-            }
+#             storage_stack_params = {
+#                 'FileStorageSecurityServicePrincipalID': service_principal_id,
+#                 'CloudOneRegion': cloudone_region,
+#                 'ScannerIdentityPrincipalID': '',
+#                 'ScannerQueueNamespace': '',
+#                 'BlobStorageAccountResourceID': '',
+#                 'BlobSystemTopicExist': 'No',
+#                 'BlobSystemTopicName': 'BlobEventTopic',
+#                 'UpdateScanResultToBlobMetadata': 'Yes',
+#                 'ReportObjectKey': 'No',
+#                 'StackPackageLocation': 'https://file-storage-security.s3.amazonaws.com',
+#                 'Version': 'latest',
+#                 'SharedAccessSignature': ''
+#             }
 
-            # Initialize the deployer class
-            deployer = Deployer(subscription_id, resource_group_name, storage_stack_params)
+#             # Initialize the deployer class
+#             deployer = Deployer(subscription_id, resource_group_name)
 
-            print("Beginning the deployment... \n\n")
-            # Deploy the template
-            my_deployment = deployer.deploy(storage_account["location"], "storage")
+#             print("Beginning the deployment... \n\n")
+#             # Deploy the template
+#             my_deployment = deployer.deploy(storage_account["location"], "storage", storage_stack_params)
 
-            print("Done deploying!!\n\n")
+#             print("Done deploying!!\n\n")
 
 if __name__ == "__main__":
     main()
