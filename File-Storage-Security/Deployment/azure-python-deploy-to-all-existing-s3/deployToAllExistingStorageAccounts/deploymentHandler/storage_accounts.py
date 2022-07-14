@@ -26,4 +26,4 @@ def get_storage_accounts(FSS_LOOKUP_TAG):
                 
         return deploy_storage_stack_list
 
-    return None
+    return []
