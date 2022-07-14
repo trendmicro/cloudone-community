@@ -106,37 +106,40 @@ def get_cloudone_region():
     cloudone_config = get_config_from_file('cloudone')
     if cloudone_config and "region" in cloudone_config.keys():
         if cloudone_config['region']:
-            return cloudone_config['region']
+            return str(cloudone_config['region'])
     if 'CLOUDONE_REGION' in os.environ.keys():
-        return os.environ.get('CLOUDONE_REGION', None)
+        return os.environ.get('CLOUDONE_REGION')
     return None
     
 def get_cloudone_api_key():
     cloudone_config = get_config_from_file('cloudone')
     if cloudone_config and "api_key" in cloudone_config.keys():
         if cloudone_config['api_key']:
-            return cloudone_config['api_key']
+            return str(cloudone_config['api_key'])
     if 'CLOUDONE_API_KEY' in os.environ.keys():
-        return os.environ.get('CLOUDONE_API_KEY', None)
+        return os.environ.get('CLOUDONE_API_KEY')
     return None
 
 def get_cloudone_max_storage_to_scanner_count():
     cloudone_config = get_config_from_file('cloudone')
     if cloudone_config and "max_storage_stack_per_scanner_stack" in cloudone_config.keys():
         if cloudone_config['max_storage_stack_per_scanner_stack']:
-            return cloudone_config['max_storage_stack_per_scanner_stack']
+            return str(cloudone_config['max_storage_stack_per_scanner_stack'])
     if 'MAX_STORAGE_STACK_PER_SCANNER_STACK' in os.environ.keys():
-        return os.environ.get('MAX_STORAGE_STACK_PER_SCANNER_STACK', None)
+        return os.environ.get('MAX_STORAGE_STACK_PER_SCANNER_STACK')
     return 50 # Recommended value for the number of Storage Stack(s) per Scanner Stack
 
 def get_subscription_id():
     azure_subscription_id = str(get_config_from_file('subscription_id'))
     if azure_subscription_id:
-        # your Azure Subscription Id - 00000000-0000-0000-0000-000000000000
-        return os.environ.get('AZURE_SUBSCRIPTION_ID', azure_subscription_id)
+        return azure_subscription_id
     if 'AZURE_SUBSCRIPTION_ID' in os.environ.keys():
-        return os.environ.get('AZURE_SUBSCRIPTION_ID', None)
+        return os.environ.get('AZURE_SUBSCRIPTION_ID')
     return None
+
+def get_subscription_id_from_resource_group_id(resource_group_id):
+
+    return resource_group_id.split('/')[2]
 
 def remove_storage_accounts_with_storage_stacks(storage_account_list):
 
