@@ -47,7 +47,7 @@ def azure_cli_run_command(command):
 # apply_exclusions - get list of storage accounts to exclude from deployment
 def apply_exclusions(filename, deploy_storage_stack_list):
     if not os.path.isfile(filename):
-        print("\n\tNo file for exclusions. File 'exclude.txt' not found.\n")
+        raise Exception("\n\tNo file for exclusions. File 'exclude.txt' not found.\n")
     else:
         content = []
         with open(filename) as f:
@@ -105,25 +105,28 @@ def get_config_from_file(config_key):
 def get_cloudone_region():
     cloudone_config = get_config_from_file('cloudone')
     if cloudone_config and "region" in cloudone_config.keys():
-        return cloudone_config['region']
+        if cloudone_config['region']:
+            return cloudone_config['region']
     if 'CLOUDONE_REGION' in os.environ.keys():
-        return os.environ.get('CLOUDONE_REGION')
+        return os.environ.get('CLOUDONE_REGION', None)
     return None
     
 def get_cloudone_api_key():
     cloudone_config = get_config_from_file('cloudone')
     if cloudone_config and "api_key" in cloudone_config.keys():
-        return cloudone_config['api_key']
+        if cloudone_config['api_key']:
+            return cloudone_config['api_key']
     if 'CLOUDONE_API_KEY' in os.environ.keys():
-        return os.environ.get('CLOUDONE_API_KEY')
+        return os.environ.get('CLOUDONE_API_KEY', None)
     return None
 
 def get_cloudone_max_storage_to_scanner_count():
     cloudone_config = get_config_from_file('cloudone')
     if cloudone_config and "max_storage_stack_per_scanner_stack" in cloudone_config.keys():
-        return cloudone_config['max_storage_stack_per_scanner_stack']
+        if cloudone_config['max_storage_stack_per_scanner_stack']:
+            return cloudone_config['max_storage_stack_per_scanner_stack']
     if 'MAX_STORAGE_STACK_PER_SCANNER_STACK' in os.environ.keys():
-        return os.environ.get('MAX_STORAGE_STACK_PER_SCANNER_STACK')
+        return os.environ.get('MAX_STORAGE_STACK_PER_SCANNER_STACK', None)
     return 50 # Recommended value for the number of Storage Stack(s) per Scanner Stack
 
 def get_subscription_id():
@@ -132,25 +135,26 @@ def get_subscription_id():
         # your Azure Subscription Id - 00000000-0000-0000-0000-000000000000
         return os.environ.get('AZURE_SUBSCRIPTION_ID', azure_subscription_id)
     if 'AZURE_SUBSCRIPTION_ID' in os.environ.keys():
-        return os.environ.get('AZURE_SUBSCRIPTION_ID')
+        return os.environ.get('AZURE_SUBSCRIPTION_ID', None)
     return None
 
 def remove_storage_accounts_with_storage_stacks(storage_account_list):
 
     storage_stack_list = cloudone_fss_api.get_storage_stacks()
 
-    temp_list = []
+    if storage_stack_list:
 
-    for storage_account in storage_account_list:
-        
-        for storage_stack in storage_stack_list["stacks"]:
+        temp_list = []
+        for storage_account in storage_account_list:
+            
+            for storage_stack in storage_stack_list["stacks"]:
 
-            if storage_account["name"] == storage_stack["storage"]:
+                if storage_account["name"] == storage_stack["storage"]:
 
-                temp_list.append(storage_account)
+                    temp_list.append(storage_account)
 
-    for storage_account in temp_list:
+        for storage_account in temp_list:
 
-        storage_account_list.pop(storage_account)
+            storage_account_list.pop(storage_account)
 
-    return storage_account_list
+    return storage_account_list    
