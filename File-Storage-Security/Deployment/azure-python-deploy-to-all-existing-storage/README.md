@@ -61,13 +61,13 @@ This script will deploy File Storage Security Stack to all storage accounts unle
 
 The Script will choose whether or not to deploy a storage stack depending on a storage accounts' tags. **See below for details**:
 
-| Tag             | Value           | Behavior                                                      |
-| --------------  | --------------- |-------------------------------------------------------------- |
-| [no tag]        | [none]          | No action                                                     |
-| `AutoDeployFSS` | `True`          | Deploy Storage Stack, Associate Scanner Stack                 |
-| `AutoDeployFSS` | `(any value)`   | Skip                                                          |
-| `FSSMonitored`  | `yes`           | Storage Stack Already Exists, Scanner Stack associated (skip) |
-| `FSSMonitored`  | `(any value)`   | Storage Stack and Scanner Stack will be deployed              |
+| Tag             | Value                 | Behavior                                                      |
+| --------------  | --------------------- |-------------------------------------------------------------- |
+| [no tag]        | [none]                | No action                                                     |
+| `AutoDeployFSS` | `True`                | Storage Stack and Scanner Stack will be deployed              |
+| `AutoDeployFSS` | `(any other value)`   | Skip                                                          |
+| `FSSMonitored`  | `yes`                 | Storage Stack Already Exists, Scanner Stack associated (skip) |
+| `FSSMonitored`  | `(any other value)`   | Skip                                                          |
 
 ### Supported FSS regions
 
