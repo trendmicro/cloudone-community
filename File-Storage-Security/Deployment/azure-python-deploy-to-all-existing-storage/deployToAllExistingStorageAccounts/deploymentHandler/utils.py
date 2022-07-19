@@ -175,3 +175,21 @@ def get_dict_key(value_dict, val):
             if val == value:
                 return key
     return None
+
+def trim_resource_name(resource_name, letter_count):
+    if len(resource_name) > letter_count:
+        return resource_name[:int(letter_count/2)] + resource_name[-int(letter_count/2):]
+    return resource_name.lower()
+
+def trim_spaces(string_value):
+    if " " in string_value:
+        string_output = None
+        temp_list = string_value.split(" ")
+        for item in temp_list[:len(temp_list)-1]:
+            if not string_output:
+                string_output = str(item[0])
+            else:
+                string_output = string_output + str(item[0])
+        string_output = string_output + str(temp_list[-1:][0])
+        return string_output.lower()
+    return string_value.lower()
