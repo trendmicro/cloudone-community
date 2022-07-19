@@ -64,4 +64,4 @@ def createServicePrincipal():
         # Testing getting SP id by app ID
         result = graphrbac_client.applications.get_service_principals_id_by_app_id(app_id)
 
-        print("\n\n\tResult - \n\n\t" + str(result))
+        print("\n\tResult - \n\t" + str(result))
