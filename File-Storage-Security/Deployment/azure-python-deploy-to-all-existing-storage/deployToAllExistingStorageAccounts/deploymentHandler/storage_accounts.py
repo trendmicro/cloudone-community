@@ -22,7 +22,7 @@ def get_storage_accounts(FSS_LOOKUP_TAG):
 
                     if storageAccount["tags"][FSS_LOOKUP_TAG]:
 
-                        deploy_storage_stack_list.append({"name": storageAccount["name"], "location": storageAccount["location"], "tags": storageAccount["tags"]})
+                        deploy_storage_stack_list.append({"name": storageAccount["name"], "location": storageAccount["location"], "tags": storageAccount["tags"], "id": storageAccount["id"]})
                 
         return deploy_storage_stack_list
 
