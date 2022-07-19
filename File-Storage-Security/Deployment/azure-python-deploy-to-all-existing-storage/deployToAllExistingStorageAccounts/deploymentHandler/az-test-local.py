@@ -44,6 +44,7 @@ DEPLOYMENT_MODELS = {
 DEFAULT_DEPLOYMENT_MODEL = 'geographies'
 
 FSS_LOOKUP_TAG = 'AutoDeployFSS'
+# TODO: Add tags to FSS deployed stacks/resources
 FSS_MONITORED_TAG = 'FSSMonitored'
 FSS_SUPPORTED_REGIONS = ["centralus", "eastus", "eastus2", "southcentralus", "westus", "westus2", "centralindia", "eastasia", "japaneast", "koreacentral", "southeastasia", "francecentral", "germanywestcentral", "northeurope", "switzerlandnorth", "uksouth", "westeurope", "uaenorth", "brazilsouth"] # List last updated on 2022-07-19T11:32:11-04:00, from https://cloudone.trendmicro.com/docs/file-storage-security/supported-azure/
 
