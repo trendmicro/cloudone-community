@@ -1,225 +1,132 @@
-import os.path
-import json
-import time
-import boto3
-import argparse
-import urllib3
-from botocore.config import Config
-from botocore.exceptions import ClientError
-http = urllib3.PoolManager()
+import logging
+from re import A
+
+import azure.functions as func
+from azure.identity import DefaultAzureCredential
+from azure.storage.blob import BlobClient, BlobServiceClient
+from azure.storage.blob._shared.models import AccountSasPermissions
+from azure.storage.blob._shared_access_signature import BlobSharedAccessSignature
+from azure.mgmt.resource import ResourceManagementClient
+from azure.mgmt.storage import StorageManagementClient
+
+from datetime import datetime
+
+import utils
+import locations
+import storage_accounts
+import deployments
+import deployment_geographies
+import deployment_one_to_one
+import deployment_single
+
+# TODO: Remove unused code and dependencies
+# import resource_groups
+# import rbac
 
 '''
-This script requires an additional text file for bucket to exclude from example "exclude.txt"
-Will deploy a storage stack to all existing buckets
-All storage stack will link to 1 Scanner Stack you define
+This script requires an additional text file for storage accounts to exclude, found in the "exclude.txt" file
+Will deploy FSS Storage stack(s) to all existing or new storage accounts,  defined by your DEPLOYMENT_MODE environment variable
+All FSS Storage stack(s) will link to FSS Scanner Stack(s), defined by your DEPLOYMENT_MODEL environment variable
 '''
 
-#variables needed
-parser = argparse.ArgumentParser(description='Deploy to All Buckets')
-parser.add_argument("--account", required=True, type=str, help="AWS Account id")
-parser.add_argument("--c1region", required=True, type=str, help="Cloud One Account Region")
-parser.add_argument("--serviceBus", required=True, type=str, help="Service Bus URL")
-parser.add_argument("--scanner", required=True, type=str, help="Scanner Stack Name")
-parser.add_argument("--apikey", required=True, type=str, help="Cloud One API Key")
-args = parser.parse_args()
+exclusion_file_name = 'exclude.txt'
+DEPLOYMENT_MODES = {
+    'existing',  # Deploy FSS scanning to existing buckets (runs one-time)
+    'new',  # Deploy FSS scanning for new storage accounts (via an event listener)
+}
+DEFAULT_DEPLOYMENT_MODE = 'existing'
 
-scanner_stack_name = args.scanner
-aws_account_id = args.account
-cloud_one_region = args.c1region
-service_bus_url = args.serviceBus
-ws_api = args.apikey
-filename = "exclude.txt"
-stacks_api_url = "https://filestorage."+cloud_one_region+".cloudone.trendmicro.com/api/"
+DEPLOYMENT_MODELS = {
+    'geographies',  # One per geographyGroup, Default
+    'one-to-one',  # One per Storage Account
+    'single'  # Just One for all Storage Accounts (not recommended for multi-region storage accounts)
+}
+DEFAULT_DEPLOYMENT_MODEL = 'geographies'
 
-#get list of buckets to exclude from deployment
-def get_exclusions(filename):
-    if not os.path.isfile(filename):
-        print("No file for exclusions")
-    else:
-        with open(filename) as f:
-            content = f.read().splitlines()
-            get_buckets(content)
+FSS_LOOKUP_TAG = 'AutoDeployFSS'
+# TODO: Add tags to FSS deployed stacks/resources
+FSS_MONITORED_TAG = 'FSSMonitored'
+FSS_SUPPORTED_REGIONS = ["centralus", "eastus", "eastus2", "southcentralus", "westus", "westus2", "centralindia", "eastasia", "japaneast", "koreacentral", "southeastasia", "francecentral", "germanywestcentral", "northeurope", "switzerlandnorth", "uksouth", "westeurope", "uaenorth", "brazilsouth"] # List last updated on 2022-07-19T11:32:11-04:00, from https://cloudone.trendmicro.com/docs/file-storage-security/supported-azure/
 
-#get list of buckets available in aws
-def get_buckets(content):
-    #setup client for s3
-    s3_client = boto3.client('s3')
-    #create empty list
-    list_of_buckets = []
-    #call list buckets
-    bucket_list = s3_client.list_buckets()
-    name = bucket_list['Buckets']
+def main():
+    '''
+        Mind map (Existing Storage Accounts)
+        --------------------------------------
 
-    #append buckets to list
-    for buckets in name:
-        all_buckets = list_of_buckets.append(buckets['Name'])
-    # remove excluded buckets from list
-    for item in content:
-        list_of_buckets.remove(item)
-    get_encryption_region(list_of_buckets)
+        - getStorageAccounts() with the FSS_LOOKUP_TAG set to True -- DONE
+        - Iterate over each Storage Account and deploy atleast 1 Scanner Stack -- IN PROGRESS
+        - Iterate over each Storage Account and build Storage Stack and Associate Scanner Stack in the process -- IN PROGRESS
+        - Display warning on scalability of the Scanner Stack and Azure Service Quotas. Recommend to split into multiple Scanner Stacks by raising a support ticket
+        - Recommend scanning all existing blobs in the Storage Account(s) that are not scanned by FSS for reasons of compliance and better OpsSec 
 
-# gather encrytpion status and bucket region
-def get_encryption_region(list_of_buckets):
-    s3_client = boto3.client("s3")
-    # check if encryption exists on bucket
-    for bucket_name in list_of_buckets:
-        try:
-            encryption = s3_client.get_bucket_encryption(Bucket=bucket_name)
-            try:
-            # kms check
-                kms_arn = encryption["ServerSideEncryptionConfiguration"]["Rules"][0]["ApplyServerSideEncryptionByDefault"]["KMSMasterKeyID"]
-                #print("Key Arn: " + kms_arn)
-                response = s3_client.get_bucket_location(Bucket=bucket_name)
-                region = response["LocationConstraint"]
-                if region is None:
-                    region = "us-east-1"
-            except KeyError:
-                # sse-s3 check
-                sse_s3_bucket = encryption["ServerSideEncryptionConfiguration"]["Rules"][0]["ApplyServerSideEncryptionByDefault"]['SSEAlgorithm']
-                #print("AWS SSE-S3: "+ sse_s3_bucket)
-                kms_arn = ""
-                response = s3_client.get_bucket_location(Bucket=bucket_name)
-                region = response["LocationConstraint"]
-                if region is None:
-                    region = "us-east-1"
-        except ClientError:
-                # not encrypted
-                #print("S3: " + bucket_name + " has no encryption enabled")
-                kms_arn = ""
-                response = s3_client.get_bucket_location(Bucket=bucket_name)
-                region = response["LocationConstraint"]
-                if region is None:
-                    region = "us-east-1"
-        # check bucket tags
-        try:
-            #print(bucket_name)
-            response = s3_client.get_bucket_tagging(Bucket=bucket_name)
-            tags = response["TagSet"]
-            tag_status = tags
-            if (next((x for x in tag_status if x['Key'] == 'FSSMonitored'), None)) == None:
-                add_tag(s3_client, bucket_name, tag_list=tag_status)
-                deploy_storage(kms_arn, region, bucket_name)
-            else:
-                for tags in tag_status:
-                    if tags["Key"] == "FSSMonitored" and tags["Value"].lower() == "no":
-                        # if tag FSSMonitored is no; skip
-                        print("S3: " + bucket_name + " has tag FSSMonitored == no; skipping")
-                        break
-                    elif tags["Key"] == "FSSMonitored" and tags["Value"].lower() == "yes":
-                        print("S3: "+ bucket_name + " FSS Tag Found!, FSS is already deployed!")
-                        break
+        Mind map (New Storage Accounts)
+        ---------------------------------
 
-        except ClientError:
-            no_tags = "does not have tags"
-            tag_status = no_tags
-            add_tag(s3_client, bucket_name, tag_list=[])
-            deploy_storage(kms_arn, region, bucket_name)
+        - Setup a listener for new Storage Accounts. The listener gets triggered once the creation event occurs
+        - getStorageAccounts() with the new Storage Account name
+        - Build a Storage Stack for the new Storage Account
+        - Identify an existing Scanner Stack that can be used to associate the new Storage Stack
+        - Associate Storage Stack(s) with the Scanner Stack
+        - Display warning on scalability of the Scanner Stack and Azure Service Quotas. Recommend to split into multiple Scanner Stacks by raising a support ticket
 
-def add_tag(s3_client, bucket_name, tag_list):
-    tag_list.append({'Key':'FSSMonitored', 'Value': 'Yes'})    
-    s3_client.put_bucket_tagging(
-        Bucket=bucket_name,
-        Tagging={"TagSet": tag_list},
-    )
-    
-#function to deploy fss storage stack
-def deploy_storage(kms_arn, region, bucket_name):
-    #set up aws Config for region changes
-    print("deploying to : " + bucket_name)
-    my_region_config = Config(
-        region_name = region,
-        signature_version = 'v4',
-        retries = {
-            'max_attempts': 10,
-            'mode': 'standard'
-        }
-    )
-    # gather cloud one ext id
-    r = http.request(
-        "GET",
-        stacks_api_url+"external-id",
-        headers={
-            "Authorization": "ApiKey " + ws_api,
-            "Api-Version": "v1",
-        },
-    )
-    try:
-        ext_id = json.loads(r.data.decode("utf-8"))['externalID']
-    except json.decoder.JSONDecodeError:
-        time.sleep(1)
-        ext_id = json.loads(r.data.decode("utf-8"))['externalID']
-    #set fss api doc parameters
-    ExternalID = {"ParameterKey": "ExternalID", "ParameterValue": ext_id}
-    CloudOneRegion = {"ParameterKey": "CloudOneRegion", "ParameterValue": cloud_one_region}
-    S3BucketToScan = {"ParameterKey": "S3BucketToScan", "ParameterValue": bucket_name}
-    Trigger_with_event = {
-        "ParameterKey": "TriggerWithObjectCreatedEvent",
-        "ParameterValue": "true",
-    }
-    scanner_queue_url = {"ParameterKey": "ScannerSQSURL", "ParameterValue": svc_bus_url}
-    scanner_aws_account = {
-        "ParameterKey": "ScannerAWSAccount",
-        "ParameterValue": aws_account_id,
-    }
-    S3_Encryption = {"ParameterKey": "KMSKeyARNForBucketSSE", "ParameterValue": kms_arn}
-    cft_client = boto3.client("cloudformation", config=my_region_config)
-        
-    
-    # using python sdk to deploy cft [cant define region though so all is deployed to my default]
-    cfbucketname = bucket_name.replace(".","-")
-    cft_client.create_stack(
-        StackName="C1-FSS-Storage-" + cfbucketname,
-        TemplateURL="https://file-storage-security.s3.amazonaws.com/latest/templates/FSS-Storage-Stack.template",
-        Parameters=[
-            ExternalID,
-            CloudOneRegion,
-            S3BucketToScan,
-            scanner_queue_url,
-            Trigger_with_event,
-            scanner_aws_account,
-            S3_Encryption,
-        ],
-        Capabilities=["CAPABILITY_IAM"],
-    )  
-    cft_waiter = cft_client.get_waiter("stack_create_complete")
-    cft_waiter.wait(StackName="C1-FSS-Storage-" + cfbucketname)
-    res = cft_client.describe_stacks(StackName="C1-FSS-Storage-" + cfbucketname)
-    storage_stack = res["Stacks"][0]["Outputs"][2]["OutputValue"]
-    #gather scanner stack id
-    id_call = http.request('GET', stacks_api_url+"stacks",fields={"limit": "100", "type": "scanner"}, headers = {'Authorization': 'ApiKey ' + ws_api, 'Api-Version': 'v1'})
-    try:
-        id_resp = json.loads(id_call.data.decode('utf-8'))['stacks']
-    except json.decoder.JSONDecodeError:
-        time.sleep(1)
-        id_resp = json.loads(id_call.data.decode('utf-8'))['stacks']
-    for data in id_resp:
-        if 'name' in data and data['name'] is not None:
-            if scanner_stack_name == data['name']:
-                stack_id = data['stackID']
-    add_to_cloudone(ws_api, stack_id, storage_stack)
+        Note: All new blobs in the new Storage Account should be scanned by FSS as and when they are dumped in the Storage Account
+    '''
 
-#call to cloudone to register stacks in FSS
-def add_to_cloudone(ws_api, stack_id, storage_stack):
-    print("FSS StorageRole Arn: " + storage_stack)
-    # add to c1
-    payload = {
-        "type": "storage",
-        "scannerStack": stack_id,
-        "provider": "aws",
-        "details": {"managementRole": storage_stack}
-    }
-    encoded_msg = json.dumps(payload)
-    resp = http.request(
-        "POST",
-        stacks_api_url+"stacks",
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": "ApiKey " + ws_api,
-            "Api-Version": "v1",
-        },
-        body=encoded_msg,
-    )
-    transform = json.loads(resp.data.decode("utf-8"))
-    url = "https://filestorage."+cloud_one_region+".cloudone.trendmicro.com/api/stacks/"+transform['stackID']
+    # # Testing
+    # # TODO: Remove offline hacks
+    # print(str(cloudone_fss_api.map_scanner_stacks_to_azure_locations()))
+    # exit(0)
 
-get_exclusions(filename)
+    subscription_id = utils.get_subscription_id()
+
+    azure_supported_locations_obj_by_geography_groups_dict = locations.get_azure_supported_locations()
+
+    # Get List of Storage Accounts to deploy FSS
+    deploy_storage_stack_list = []
+    deployment_mode = utils.get_deployment_mode_from_env('DEPLOYMENT_MODE', DEPLOYMENT_MODES, DEFAULT_DEPLOYMENT_MODE)
+
+    if deployment_mode == 'existing':
+        deploy_storage_stack_list = storage_accounts.get_storage_accounts(FSS_LOOKUP_TAG)
+
+        if deploy_storage_stack_list:
+            deploy_storage_stack_list = utils.apply_exclusions(exclusion_file_name, deploy_storage_stack_list)            
+        else:
+            raise Exception('No Storage Account(s) match the \"' + FSS_LOOKUP_TAG + '\" tag. Exiting ...')
+
+        if deploy_storage_stack_list:
+            deploy_storage_stack_list = utils.remove_storage_accounts_with_storage_stacks(deploy_storage_stack_list)
+        else:
+            raise Exception('No Storage Account(s) match the \"' + FSS_LOOKUP_TAG + '\" tag. Exiting ...')
+
+    else: # deployment_mode == 'new'        
+        # # TODO: Build an event listener to trigger deployment based on Storage Account creation events.
+        raise Exception('Deploying to new storage account based on an event listener is yet to be built into this tool.')
+
+    # Get Deployment Model - geographies, one-to-one or  single
+    deployment_model = utils.get_deployment_model_from_env('DEPLOYMENT_MODEL', DEPLOYMENT_MODELS, DEFAULT_DEPLOYMENT_MODEL)
+
+    if deployment_model == 'geographies':
+
+        scanner_stacks_map_by_geographies_dict, storage_stacks_map_by_geographies_dict = deployments.build_geography_dict(azure_supported_locations_obj_by_geography_groups_dict, deploy_storage_stack_list)
+
+        print("\nscanner_stacks_map_by_geographies_dict - " + str(scanner_stacks_map_by_geographies_dict) + "\n")
+        print("\nstorage_stacks_map_by_geographies_dict - " + str(storage_stacks_map_by_geographies_dict) + "\n")        
+
+        # Scanner and Storage Stack Maps are built. Now, let's deploy.            
+        # Deploy FSS Scanner Stacks for the different geographies we have storage accounts
+        deployments.deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, scanner_stacks_map_by_geographies_dict, storage_stacks_map_by_geographies_dict) # TODO: Fix this description. Subscription Id, Existing Scanner stacks so we dont recreate one for the geography, list of geographies we need Scanner stacks in (might overlap with existing), storage accounts that exist without a scanner-storage stack
+
+        # # FSS Storage Stack Deployment
+        # deployments.deploy_fss_storage_stack(subscription_id,  deploy_storage_stack_list)
+
+    elif deployment_model == 'one-to-one':
+        pass
+
+    elif deployment_model == 'single':
+
+        subscription_id = utils.get_subscription_id()
+
+        deployment_single.deploy_single(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, FSS_SUPPORTED_REGIONS, deploy_storage_stack_list)
+
+if __name__ == "__main__":
+    main()
