@@ -3,7 +3,6 @@ import urllib3
 http = urllib3.PoolManager()
 
 import utils
-import time
 
 def filter_stacks_by_subscription_id(subscription_id, cloudone_fss_stacks_output):
 
@@ -35,7 +34,7 @@ def get_scanner_stacks():
 
             )
             if r.status == 200:
-                return filter_stacks_by_subscription_id(subscription_id, json.loads(r.data))
+                return json.loads(r.data)
             else:
                 raise Exception("HTTP Request failure (code: " + str(r.status) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
     except:
@@ -60,7 +59,7 @@ def get_storage_stacks():
 
             )
             if r.status == 200:
-                return filter_stacks_by_subscription_id(subscription_id, json.loads(r.data))
+                return json.loads(r.data)
             else:
                 raise Exception("HTTP Request failure (code: " + str(r.status) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
     except:
