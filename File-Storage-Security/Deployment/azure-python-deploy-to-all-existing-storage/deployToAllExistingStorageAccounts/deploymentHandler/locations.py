@@ -47,16 +47,16 @@ def get_azure_supported_locations():
     az_supported_locations_obj_by_geography_groups = {}
 
     for az_location in az_locations_list:
-        if az_location["metadata"]["geographyGroup"] and az_location["metadata"]["geographyGroup"] not in az_supported_locations_obj_by_geography_groups.keys():
-            az_supported_locations_obj_by_geography_groups.update({az_location["metadata"]["geographyGroup"]: []})
+        if az_location["metadata"]["geographyGroup"] and az_location["metadata"]["geographyGroup"].lower() not in az_supported_locations_obj_by_geography_groups.keys():
+            az_supported_locations_obj_by_geography_groups.update({az_location["metadata"]["geographyGroup"].lower(): []})
         elif not az_location["metadata"]["geographyGroup"]:
-            az_supported_locations_obj_by_geography_groups.update({"Logical": []})
+            az_supported_locations_obj_by_geography_groups.update({"logical": []})
 
     for az_location in az_locations_list:
         if az_location["metadata"]["regionType"] == "Physical":
-            az_supported_locations_obj_by_geography_groups[az_location["metadata"]["geographyGroup"]].append(az_location)
+            az_supported_locations_obj_by_geography_groups[az_location["metadata"]["geographyGroup"].lower()].append(az_location)
         else:
-            az_supported_locations_obj_by_geography_groups["Logical"].append(az_location)
+            az_supported_locations_obj_by_geography_groups["logical"].append(az_location)
 
     return az_supported_locations_obj_by_geography_groups
 
