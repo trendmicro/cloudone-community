@@ -1,5 +1,6 @@
 import os
 import json
+import tempfile
 
 from azure.cli.core import get_default_cli
 # from munch import DefaultMunch 
@@ -34,9 +35,14 @@ def get_deployment_model_from_env(model_key, DEPLOYMENT_MODELS, DEFAULT_DEPLOYME
 
 def azure_cli_run_command(command):
     args = command.split()
+    temp = tempfile.TemporaryFile(mode="w") 
 
     cli = get_default_cli()
-    cli.invoke(args)
+    cli.invoke(args, None, temp)
+
+    # temp.seek(0)
+    # data = temp.read().strip()
+    temp.close()
 
     if cli.result.result:
         return cli.result.result
@@ -160,4 +166,12 @@ def remove_storage_accounts_with_storage_stacks(storage_account_list):
 
             storage_account_list.pop(storage_account)
 
-    return storage_account_list    
+    return storage_account_list
+
+# function to return dict key for any value
+def get_dict_key(value_dict, val):
+    if value_dict:
+        for key, value in value_dict.items():
+            if val == value:
+                return key
+    return None
