@@ -12,6 +12,7 @@
 
 ## macOS files
 **/.DS_Store
+**/.dccache
 
 ## Generic files to avoid including to this repo
 **/**.pyc
