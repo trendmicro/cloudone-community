@@ -80,14 +80,14 @@ class Deployer(object):
         # TODO: Tag your deployments so you can keep track
         deployment_async_operation = self.client.deployments.begin_create_or_update(
             resource_group_name = self.resource_group_name,
-            deployment_name = self.resource_group_name + '-deployment',
+            deployment_name = self.resource_group_name + '-dep',
             parameters = Deployment(properties = deployment_properties)
         )
         deployment_async_operation.wait()
 
         deployment_outputs = self.client.deployments.get(
             resource_group_name = self.resource_group_name,
-            deployment_name = self.resource_group_name + '-deployment'
+            deployment_name = self.resource_group_name + '-dep'
         )    
 
         print(str(deployment_outputs.properties.outputs))   
