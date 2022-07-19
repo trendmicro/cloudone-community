@@ -42,9 +42,9 @@ def build_geographies_map_dict():
 
             geography_map_dict.update({azure_location: []})
 
-    # Remove any Logical Azure Locations in Map Dictionary
+    # Remove any logical Azure Locations in Map Dictionary
 
-    geography_map_dict.pop("Logical")
+    geography_map_dict.pop("logical")
 
     return geography_map_dict
 
