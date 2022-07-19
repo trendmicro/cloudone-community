@@ -77,12 +77,22 @@ class Deployer(object):
             parameters = parameters
         )
 
+        # TODO: Tag your deployments so you can keep track
         deployment_async_operation = self.client.deployments.begin_create_or_update(
-            self.resource_group_name,
-            self.resource_group_name + '-deployment',
-            Deployment(properties=deployment_properties)
+            resource_group_name = self.resource_group_name,
+            deployment_name = self.resource_group_name + '-deployment',
+            parameters = Deployment(properties = deployment_properties)
         )
         deployment_async_operation.wait()
+
+        deployment_outputs = self.client.deployments.get(
+            resource_group_name = self.resource_group_name,
+            deployment_name = self.resource_group_name + '-deployment'
+        )    
+
+        print(str(deployment_outputs.properties.outputs))   
+
+        return deployment_outputs.properties.outputs 
 
     def destroy(self):
         """Destroy the given resource group"""
