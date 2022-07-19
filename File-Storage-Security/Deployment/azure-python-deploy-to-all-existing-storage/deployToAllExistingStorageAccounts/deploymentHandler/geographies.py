@@ -11,7 +11,6 @@ def get_geographies_from_storage_accounts(deploy_storage_stack_list, az_supporte
         print("\nStorage Account - " + str(az_geography_group))
 
         if az_geography_group not in unique_scanner_stack_list:
-
             unique_scanner_stack_list.append(az_geography_group)
 
     return unique_scanner_stack_list
@@ -19,13 +18,9 @@ def get_geographies_from_storage_accounts(deploy_storage_stack_list, az_supporte
 def get_geography_group_from_location(az_location_name, az_geography_groups_dict): # eastus, { az_geography_groups_dict ... }
 
     for az_geography_group_item in az_geography_groups_dict:
-
         for az_location in az_geography_groups_dict[az_geography_group_item]:
-
             if az_location_name == az_location["name"]:
-
                 return az_geography_group_item
-
     return None
 
 def build_geographies_map_dict():
@@ -36,14 +31,11 @@ def build_geographies_map_dict():
 
     # print(str(azure_supported_locations_obj_by_geography_groups_dict))
 
-    for azure_location in azure_supported_locations_obj_by_geography_groups_dict:
-
-        if azure_location not in geography_map_dict:
-
-            geography_map_dict.update({azure_location: []})
+    for azure_geography_group in azure_supported_locations_obj_by_geography_groups_dict:
+        if azure_geography_group not in geography_map_dict:
+            geography_map_dict.update({azure_geography_group: []})
 
     # Remove any logical Azure Locations in Map Dictionary
-
     geography_map_dict.pop("logical")
 
     return geography_map_dict
