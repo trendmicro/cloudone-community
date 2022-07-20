@@ -1,26 +1,27 @@
+from operator import ge
 import locations
 
-def get_geographies_from_storage_accounts(azure_storage_account_list, az_supported_locations_obj_by_geography_groups_dict):
+def get_geographies_from_storage_accounts(azure_storage_account_list, azure_supported_locations_obj_by_geography_groups_dict):
 
     unique_scanner_stack_list = []
 
     for storage_account in azure_storage_account_list:
 
-        az_geography_group = get_geography_group_from_location(storage_account["location"], az_supported_locations_obj_by_geography_groups_dict)
+        azure_geography_group = get_geography_group_from_location(storage_account["location"], azure_supported_locations_obj_by_geography_groups_dict)
 
-        print("\nStorage Account - " + str(az_geography_group))
+        print("\nStorage Account - " + str(azure_geography_group))
 
-        if az_geography_group not in unique_scanner_stack_list:
-            unique_scanner_stack_list.append(az_geography_group)
+        if azure_geography_group not in unique_scanner_stack_list:
+            unique_scanner_stack_list.append(azure_geography_group)
 
     return unique_scanner_stack_list
 
-def get_geography_group_from_location(az_location_name, az_geography_groups_dict): # eastus, { az_geography_groups_dict ... }
+def get_geography_group_from_location(azure_location_name, azure_geography_groups_dict): # eastus, { azure_geography_groups_dict ... }
 
-    for az_geography_group_item in az_geography_groups_dict:
-        for az_location in az_geography_groups_dict[az_geography_group_item]:
-            if az_location_name == az_location["name"]:
-                return az_geography_group_item
+    for azure_geography_group_item in azure_geography_groups_dict:
+        for azure_location in azure_geography_groups_dict[azure_geography_group_item]:
+            if azure_location_name == azure_location["name"]:
+                return azure_geography_group_item
     return None
 
 def build_geographies_map_dict():
@@ -37,6 +38,9 @@ def build_geographies_map_dict():
 
     # Remove any logical Azure Locations in Map Dictionary
     geography_map_dict.pop("logical")
+
+    for geography in geography_map_dict.keys():
+        print("\n\t\t\t" + geography)
 
     return geography_map_dict
 
