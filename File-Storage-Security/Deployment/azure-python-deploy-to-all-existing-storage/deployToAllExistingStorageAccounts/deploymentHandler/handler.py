@@ -82,19 +82,19 @@ def main():
     azure_supported_locations_obj_by_geography_groups_dict = locations.get_azure_supported_locations()
 
     # Get List of Storage Accounts to deploy FSS
-    deploy_storage_stack_list = []
+    azure_storage_account_list = []
     deployment_mode = utils.get_deployment_mode_from_env('DEPLOYMENT_MODE', DEPLOYMENT_MODES, DEFAULT_DEPLOYMENT_MODE)
 
     if deployment_mode == 'existing':
-        deploy_storage_stack_list = storage_accounts.get_storage_accounts(FSS_LOOKUP_TAG)
+        azure_storage_account_list = storage_accounts.get_storage_accounts(FSS_LOOKUP_TAG)
 
-        if deploy_storage_stack_list:
-            deploy_storage_stack_list = utils.apply_exclusions(exclusion_file_name, deploy_storage_stack_list)            
+        if azure_storage_account_list:
+            azure_storage_account_list = utils.apply_exclusions(exclusion_file_name, azure_storage_account_list)            
         else:
             raise Exception('No Storage Account(s) match the \"' + FSS_LOOKUP_TAG + '\" tag. Exiting ...')
 
-        if deploy_storage_stack_list:
-            deploy_storage_stack_list = utils.remove_storage_accounts_with_storage_stacks(deploy_storage_stack_list)
+        if azure_storage_account_list:
+            azure_storage_account_list = utils.remove_storage_accounts_with_cloudone_storage_stacks(azure_storage_account_list)
         else:
             raise Exception('No Storage Account(s) match the \"' + FSS_LOOKUP_TAG + '\" tag. Exiting ...')
 
@@ -107,7 +107,7 @@ def main():
 
     if deployment_model == 'geographies':
 
-        scanner_stacks_map_by_geographies_dict, storage_stacks_map_by_geographies_dict = deployments.build_geography_dict(azure_supported_locations_obj_by_geography_groups_dict, deploy_storage_stack_list)
+        scanner_stacks_map_by_geographies_dict, storage_stacks_map_by_geographies_dict = deployments.build_geography_dict(azure_supported_locations_obj_by_geography_groups_dict, azure_storage_account_list)
 
         print("\nscanner_stacks_map_by_geographies_dict - " + str(scanner_stacks_map_by_geographies_dict) + "\n")
         print("\nstorage_stacks_map_by_geographies_dict - " + str(storage_stacks_map_by_geographies_dict) + "\n")        
@@ -117,16 +117,19 @@ def main():
         deployments.deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, scanner_stacks_map_by_geographies_dict, storage_stacks_map_by_geographies_dict) # TODO: Fix this description. Subscription Id, Existing Scanner stacks so we dont recreate one for the geography, list of geographies we need Scanner stacks in (might overlap with existing), storage accounts that exist without a scanner-storage stack
 
         # # FSS Storage Stack Deployment
-        # deployments.deploy_fss_storage_stack(subscription_id,  deploy_storage_stack_list)
+        # deployments.deploy_fss_storage_stack(subscription_id,  azure_storage_account_list)
 
     elif deployment_model == 'one-to-one':
-        pass
+
+        subscription_id = utils.get_subscription_id()
+
+        deployment_one_to_one.deploy_one_to_one(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, FSS_SUPPORTED_REGIONS, azure_storage_account_list)
 
     elif deployment_model == 'single':
 
         subscription_id = utils.get_subscription_id()
 
-        deployment_single.deploy_single(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, FSS_SUPPORTED_REGIONS, deploy_storage_stack_list)
+        deployment_single.deploy_single(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, FSS_SUPPORTED_REGIONS, azure_storage_account_list)
 
 if __name__ == "__main__":
     main()
