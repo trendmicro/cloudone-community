@@ -90,7 +90,7 @@ class Deployer(object):
             deployment_name = self.resource_group_name + '-dep'
         )    
 
-        print(str(deployment_outputs.properties.outputs))   
+        # print(str(deployment_outputs.properties.outputs))   
 
         return deployment_outputs.properties.outputs 
 
