@@ -6,6 +6,7 @@ from azure.cli.core import get_default_cli
 # from munch import DefaultMunch 
 
 import cloudone_fss_api
+import locations
 
 # compose_tags: Adds the FSSMonitored tag to the Storage Account(s) that are monitored by Trend Micro File Storage Security
 def compose_tags(existing_tags, FSS_MONITORED_TAG):
@@ -178,6 +179,20 @@ def trim_resource_name(resource_name, start_trim_count=0, end_trim_count=0):
     if len(resource_name) > (start_trim_count + end_trim_count):
         return resource_name[:start_trim_count] + resource_name[-end_trim_count:]
     return resource_name.lower()
+
+def trim_location_name(azure_location_name):
+    if len(azure_location_name) > 6:
+        azure_location_display_name = locations.get_azure_location_detail(azure_location_name)["displayName"]
+        string_output = None
+        temp_list = azure_location_display_name.split(" ")    
+        for item in temp_list[:len(temp_list)-1]:
+            if not string_output:
+                string_output = str(item[0])
+            else:
+                string_output = string_output + str(item[0])
+        string_output = string_output + str(temp_list[-1:][0][:3])
+        return string_output.lower()
+    return azure_location_name
 
 def trim_spaces(string_value):
     if " " in string_value:
