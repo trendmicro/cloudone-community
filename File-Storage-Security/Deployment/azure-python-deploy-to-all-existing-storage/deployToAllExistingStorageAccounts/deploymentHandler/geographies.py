@@ -1,12 +1,12 @@
 import locations
 
-def get_geographies_from_storage_accounts(deploy_storage_stack_list, az_supported_locations_obj_by_geography_groups_dict):
+def get_geographies_from_storage_accounts(azure_storage_account_list, az_supported_locations_obj_by_geography_groups_dict):
 
     unique_scanner_stack_list = []
 
-    for storageAccount in deploy_storage_stack_list:
+    for storage_account in azure_storage_account_list:
 
-        az_geography_group = get_geography_group_from_location(storageAccount["location"], az_supported_locations_obj_by_geography_groups_dict)
+        az_geography_group = get_geography_group_from_location(storage_account["location"], az_supported_locations_obj_by_geography_groups_dict)
 
         print("\nStorage Account - " + str(az_geography_group))
 

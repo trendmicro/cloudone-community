@@ -1,9 +1,9 @@
 import geographies
 import cloudone_fss_api
 
-def deploy_geographically(azure_supported_locations_obj_by_geography_groups_dict, deploy_storage_stack_list):
+def deploy_geographically(azure_supported_locations_obj_by_geography_groups_dict, azure_storage_account_list):
     # Inventory of existing storage accounts
-    # unique_storage_account_geographies = geographies.get_geographies_from_storage_accounts(deploy_storage_stack_list, azure_supported_locations_obj_by_geography_groups_dict)
+    # unique_storage_account_geographies = geographies.get_geographies_from_storage_accounts(azure_storage_account_list, azure_supported_locations_obj_by_geography_groups_dict)
 
     # Scanner Stack Map
     scanner_stacks_map_by_geographies_dict = geographies.build_geographies_map_dict()  
@@ -43,7 +43,7 @@ def deploy_geographically(azure_supported_locations_obj_by_geography_groups_dict
     # temp_new_scanner_stack_location_list = []
 
     # # Cycle through everywhere we need a storage stack deployed for the storage account
-    # for storage_account in deploy_storage_stack_list:
+    # for storage_account in azure_storage_account_list:
 
     #     # Cycle through all the Azure locations we have scanner stacks
     #     for existing_scanner_stack_location in existing_scanner_stacks_by_location:
@@ -82,7 +82,7 @@ def deploy_geographically(azure_supported_locations_obj_by_geography_groups_dict
     # ----        
 
     # Populate the Storage stack map by geographies
-    for storage_account in deploy_storage_stack_list:
+    for storage_account in azure_storage_account_list:
 
         if existing_scanner_stacks_by_location:
 
