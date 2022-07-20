@@ -6,9 +6,9 @@ import cloudone_fss_api
 
 from Deployer import Deployer
 
-def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, azure_location, fss_supported_regions_list, scanner_stack_name=None, resource_group_name=None, geography_group_name=None):
+def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, azure_location, fss_supported_regions_list, azure_storage_account_name=None, scanner_stack_name=None, resource_group_name=None, geography_group_name=None):
 
-    # File Storage Security Scanner Stack deployment templates can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Scanner-Stack-Template.json
+    # File Storage Security Scanner Stack deployment templates can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Scanner-Stack-Template.json or in the ./templates directory
 
     app_id = str(utils.get_config_from_file("app_id"))
     cloudone_region = str(utils.get_cloudone_region())
@@ -22,8 +22,11 @@ def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_g
 
             print("Azure location (" + azure_location + ") is not part of the FSS supported regions. Choosing the next Azure recommended location in the same geography.")
             geography_group_name = geographies.get_geography_group_from_location(azure_location, azure_supported_locations_obj_by_geography_groups_dict)
-            azure_location = locations.get_azure_recommended_location_by_geography_group(geography_group_name, azure_supported_locations_obj_by_geography_groups_dict)
+
+            azure_location = locations.get_azure_recommended_location_by_geography_group(geography_group_name, azure_supported_locations_obj_by_geography_groups_dict, fss_supported_regions_list)
             print("New Azure location: " + azure_location)
+
+            scanner_stack_name = "fss-scanner-stack-" + utils.trim_location_name(azure_location) + "-" + utils.trim_resource_name(azure_storage_account_name, 10, 10) + "-autodeploy"
 
         if not geography_group_name:
             geography_group_name = geographies.get_geography_group_from_location(azure_location, azure_supported_locations_obj_by_geography_groups_dict)
@@ -64,13 +67,14 @@ def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_g
 
 def deploy_fss_storage_stack(subscription_id, storage_account, cloudone_scanner_stack_id, scanner_identity_principal_id, scanner_queue_namespace, storage_stack_name=None, resource_group_name=None):
 
-    # File Storage Security Storage Stack deployment template can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Storage-Stack-Template.json
+    # File Storage Security Storage Stack deployment template can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Storage-Stack-Template.json or in the ./templates directory
 
     app_id = str(utils.get_config_from_file("app_id"))
     cloudone_region = str(utils.get_cloudone_region())
 
     if not storage_stack_name:
-        storage_stack_name = "fss-storage-stack-" + utils.trim_resource_name(storage_account["name"], 6, 6) + "-" + str(storage_account["location"]) + "-autodeploy"
+        storage_stack_name = "fss-storage-stack-" + utils.trim_location_name(storage_account["location"]) + "-" + utils.trim_resource_name(storage_account["name"], 10, 10) +  "-autodeploy"
+
     if not resource_group_name:
         resource_group_name = storage_stack_name + "-rg"
 
