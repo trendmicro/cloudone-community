@@ -51,7 +51,7 @@ def azure_cli_run_command(command):
     return None
 
 # apply_exclusions - get list of storage accounts to exclude from deployment
-def apply_exclusions(filename, deploy_storage_stack_list):
+def apply_exclusions(filename, azure_storage_account_list):
     if not os.path.isfile(filename):
         raise Exception("\n\tNo file for exclusions. File 'exclude.txt' not found.\n")
     else:
@@ -61,7 +61,7 @@ def apply_exclusions(filename, deploy_storage_stack_list):
 
         temp_list = []
         for storage_account_name in content:
-            for storage_account in deploy_storage_stack_list:
+            for storage_account in azure_storage_account_list:                
                 if storage_account["name"] == storage_account_name:
                     temp_list.append(storage_account)
 
@@ -75,11 +75,9 @@ def apply_exclusions(filename, deploy_storage_stack_list):
             print('\n\tExcluding ' + str(len(temp_list)) + ' storage accounts from the deployment')
 
         for item in temp_list:
-            deploy_storage_stack_list.remove(item)
+            azure_storage_account_list.remove(item)
 
-        return deploy_storage_stack_list
-
-    return None
+        return azure_storage_account_list
 
 # # Convert all Dict keys into a list for set-issubset checks
 # def get_all_keys(dict):
@@ -147,16 +145,16 @@ def get_subscription_id_from_resource_group_id(resource_group_id):
 
     return resource_group_id.split('/')[2]
 
-def remove_storage_accounts_with_storage_stacks(storage_account_list):
+def remove_storage_accounts_with_cloudone_storage_stacks(azure_storage_account_list):
 
-    storage_stack_list = cloudone_fss_api.get_storage_stacks()
+    cloudone_storage_stack_list = cloudone_fss_api.get_storage_stacks()
 
-    if storage_stack_list:
+    if cloudone_storage_stack_list:
 
         temp_list = []
-        for storage_account in storage_account_list:
+        for storage_account in azure_storage_account_list:
             
-            for storage_stack in storage_stack_list["stacks"]:
+            for storage_stack in cloudone_storage_stack_list["stacks"]:
 
                 if storage_account["name"] == storage_stack["storage"]:
 
@@ -164,9 +162,9 @@ def remove_storage_accounts_with_storage_stacks(storage_account_list):
 
         for storage_account in temp_list:
 
-            storage_account_list.pop(storage_account)
+            azure_storage_account_list.remove(storage_account)        
 
-    return storage_account_list
+    return azure_storage_account_list
 
 # function to return dict key for any value
 def get_dict_key(value_dict, val):
@@ -176,9 +174,9 @@ def get_dict_key(value_dict, val):
                 return key
     return None
 
-def trim_resource_name(resource_name, letter_count):
-    if len(resource_name) > letter_count:
-        return resource_name[:int(letter_count/2)] + resource_name[-int(letter_count/2):]
+def trim_resource_name(resource_name, start_trim_count=0, end_trim_count=0):
+    if len(resource_name) > (start_trim_count + end_trim_count):
+        return resource_name[:start_trim_count] + resource_name[-end_trim_count:]
     return resource_name.lower()
 
 def trim_spaces(string_value):
@@ -192,4 +190,6 @@ def trim_spaces(string_value):
                 string_output = string_output + str(item[0])
         string_output = string_output + str(temp_list[-1:][0])
         return string_output.lower()
+    elif len(string_value) > 6:
+        return string_value[:3].lower()
     return string_value.lower()
