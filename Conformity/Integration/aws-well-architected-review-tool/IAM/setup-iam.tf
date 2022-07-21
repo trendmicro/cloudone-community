@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 4.22.0"
     }
+    http-full = {
+      source = "salrashid123/http-full"
+      version = "~> 1.2.8"
+    }
   }
 }
 
@@ -14,15 +18,21 @@ variable "region" {
   default = "PLEASE_CHANGE_ME"
 }
 
+variable "c1-region" {
+  type = string
+  description = "Cloud One region"
+  default = "PLEASE_CHANGE_ME"
+}
+
 variable "workload" {
   type = string
   description = "Well-Architected Workload"
   default = "PLEASE_CHANGE_ME"
 }
 
-variable "external-id" {
+variable "c1-api-key" {
   type = string
-  description = "Cloud One Conformity External Id"
+  description = "Cloud One Api Key"
   default = "PLEASE_CHANGE_ME"
 }
 
@@ -31,6 +41,8 @@ provider "aws" {
   region = var.region
 }
 
+# Configure the http Provider
+provider "http-full" { }
 
 # Create IAM policy
 resource "aws_iam_policy" "well-architected-tool-policy" {
@@ -65,7 +77,7 @@ resource "aws_iam_role" "well-architected-tool-role" {
       "Action": "sts:AssumeRole",
       "Condition": {
         "StringEquals": {
-          "sts:ExternalId": var.external-id
+          "sts:ExternalId": jsondecode(data.http.conformity-external-id.body).data.id
         }
       }
     }

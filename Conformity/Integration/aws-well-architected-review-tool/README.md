@@ -12,21 +12,11 @@ To know more about the Well-Architect Review, check this [Blog Post](https://new
 - This API is only available to ADMIN users.
 - AWS CLI [installed](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [configured](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html).
 - An active Conformity AWS Account ID in your organisation
-- In order to allow Conformity to make changes to your workload review, you will need:
-    - Your Conformity Organisation's external ID. This can be obtained by making an API call to Get Organisation External Id, here an request example:
+- Your Conformity Organisation's external ID.
+- The ARN of a defined Well-Architected workload, to retrieve the workload arn you can use the following AWS CLI command:
 
     ```bash
-    curl -k -s -X GET https://conformity.us-1.cloudone.trendmicro.com/api/organisation/external-id \
-        -H "Authorization: ApiKey tmc12C7YYdeTXBOV2eUQTrcVCT0EDET:6dvZUR8GFiSbPhRJqbT2qrWHAyK3tQMfaKHdaunAbxka9txpVgNhB5L5QYhJAXrr27" \
-        -H 'api-version: v1' \
-        -H "Content-Type: application/vnd.api+json" | jq '.[].id' | sed 's/"//g'
-    ```
-    PS.: All the commands were tested in MacOS and you need to have `curl`, `sed` and `jq` installed
-
-    - The ARN of a defined Well-Architected workload, to retrieve the workload arn you can use the following AWS CLI command:
-
-    ```bash
-    aws wellarchitected list-workloads | jq '.[][].WorkloadArn' | sed 's/"//g'
+    aws wellarchitected list-workloads
     ``` 
     
     ## Setup IAM Permissions
@@ -36,7 +26,8 @@ To know more about the Well-Architect Review, check this [Blog Post](https://new
     To install terraform, follow this [Guide](https://learn.hashicorp.com/tutorials/terraform/install-cli#install-terraform)
 
     First you need to provide in the terraform template:
-    - Cloud One Conformity External Id
+    - Cloud One API Key with `full-access` permissions
+    - Cloud One Region
     - Well-Architected Workload
     - AWS Region
 
@@ -73,7 +64,7 @@ To know more about the Well-Architect Review, check this [Blog Post](https://new
         -H "Authorization: ApiKey <YOUR-CLOUDONE-API-KEY>" \
         -H 'api-version: v1' \
         -H "Content-Type: application/vnd.api+json" \
-        -d '{ "meta": { "accountId": "84371h26-9839-12u5-a017-7936837b2d9b", "roleArn": "arn:aws:wellarchitected:us-east-1:38920491820:workload/60d5038912d5b548dfdfwer2354f" } }' | jq
+        -d '{ "meta": { "accountId": "84371h26-9839-12u5-a017-7936837b2d9b", "roleArn": "arn:aws:iam::93469203752:role/well-architected-tool-role", "workloadArn":"arn:aws:wellarchitected:us-east-1:38920491820:workload/60d5038912d5b548dfdfwer2354f" } }' | jq
     ```
 
     You should see a message like this:
