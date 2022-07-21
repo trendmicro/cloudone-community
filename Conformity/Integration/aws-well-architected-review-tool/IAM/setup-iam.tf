@@ -4,9 +4,9 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 4.22.0"
     }
-    http-full = {
-      source = "salrashid123/http-full"
-      version = "~> 1.2.8"
+    conformity = {
+      source = "trendmicro/conformity"
+      version = "0.4.5"
     }
   }
 }
@@ -41,8 +41,14 @@ provider "aws" {
   region = var.region
 }
 
-# Configure the http Provider
-provider "http-full" { }
+# Configure the conformity Provider
+provider "conformity" {
+  region = var.c1-region
+  apikey = var.c1-api-key
+}
+
+# Retrive the external id
+data "conformity_external_id" "all"{}
 
 # Create IAM policy
 resource "aws_iam_policy" "well-architected-tool-policy" {
@@ -77,7 +83,7 @@ resource "aws_iam_role" "well-architected-tool-role" {
       "Action": "sts:AssumeRole",
       "Condition": {
         "StringEquals": {
-          "sts:ExternalId": jsondecode(data.http.conformity-external-id.body).data.id
+          "sts:ExternalId": data.conformity_external_id.all.external_id
         }
       }
     }
