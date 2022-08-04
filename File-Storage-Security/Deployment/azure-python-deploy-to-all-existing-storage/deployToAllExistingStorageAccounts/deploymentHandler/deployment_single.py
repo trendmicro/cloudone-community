@@ -1,3 +1,5 @@
+import logging
+
 import deployments
 import cloudone_fss_api
 import utils
@@ -33,6 +35,7 @@ def deploy_single(subscription_id, azure_supported_locations_obj_by_geography_gr
             scanner_stack_queue_namespace = scanner_stack_deployment_outputs["scannerQueueNamespace"]["value"]
 
         else:
+            logging.error("Deployment Failed. The deployment did not create any output(s). Check deployment status for more details on how to troubleshoot this issue.")
             raise Exception("Deployment Failed. The deployment did not create any output(s). Check deployment status for more details on how to troubleshoot this issue.")
 
     else:        
@@ -42,10 +45,6 @@ def deploy_single(subscription_id, azure_supported_locations_obj_by_geography_gr
         scanner_stack_queue_namespace = scanner_stacks_list["stacks"][0]["details"]["scannerQueueNamespace"]
 
     if cloudone_scanner_stack_id and scanner_stack_identity_principal_id and scanner_stack_queue_namespace:
-
-        print("cloudone_scanner_stack_id - " + str(cloudone_scanner_stack_id))
-        print("scanner_stack_identity_principal_id - " + str(scanner_stack_identity_principal_id))
-        print("scanner_stack_queue_namespace - " + str(scanner_stack_queue_namespace))
 
         for storage_account in azure_storage_account_list:        
 
