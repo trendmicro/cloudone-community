@@ -6,7 +6,7 @@ def get_storage_accounts(FSS_LOOKUP_TAG):
 
     storage_accounts_json_response = utils.azure_cli_run_command('storage account list')
 
-    logging.info("\n\tTag Lookup: " + FSS_LOOKUP_TAG)
+    logging.info("Tag Lookup: " + FSS_LOOKUP_TAG)
 
     azure_storage_account_list = []
 

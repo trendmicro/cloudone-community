@@ -1,6 +1,4 @@
 from azure.mgmt.subscription import SubscriptionClient
-from azure.identity import DefaultAzureCredential
-from azure.common.credentials import ServicePrincipalCredentials
 from azure.identity import ClientSecretCredential
 
 import os
@@ -12,8 +10,6 @@ def get_azure_recommended_location_by_geography_group(azure_geography_group, azu
     for azure_geography_group_item in azure_geography_groups_dict:
         if azure_geography_group == azure_geography_group_item:
 
-            # print("Print Dict: " + str(azure_geography_groups_dict))
-
             temp_azure_geography_group_list = []
             for azure_location in azure_geography_groups_dict[azure_geography_group]:
 
@@ -21,28 +17,7 @@ def get_azure_recommended_location_by_geography_group(azure_geography_group, azu
 
                     temp_azure_geography_group_list.append(azure_location)
 
-            # print("Value: " + str(temp_azure_geography_group_list))
-            # print("Length: " + str(len(temp_azure_geography_group_list)))
-            # print("Random Location: " + str(random.randint(0, len(temp_azure_geography_group_list)-1)))
-            # print("Random Location Name: " + str(temp_azure_geography_group_list[random.randint(0, len(temp_azure_geography_group_list)-1)]["name"]))
-
-            return temp_azure_geography_group_list[random.randint(0, len(temp_azure_geography_group_list)-1)]["name"]    
-
-# # TODO: Deprecate this function if not in use
-# def get_azure_recommended_locations_list_by_geography_groups():
-
-#     azure_locations_list = utils.azure_cli_run_command('account list-locations')
-
-#     unique_geography_groups_list = []
-
-#     for azure_location in azure_locations_list:
-#         if azure_location["metadata"]["geographyGroup"] and azure_location["metadata"]["geographyGroup"] not in unique_geography_groups_list:
-#             unique_geography_groups_list.append(azure_location["metadata"]["geographyGroup"])
-
-#     for azure_geography_group_item in unique_geography_groups_list:
-#         for azure_location in azure_locations_list:
-#             if azure_location["metadata"]["geographyGroup"] == azure_geography_group_item and azure_location["metadata"]["regionCategory"] == "Recommended":
-#                 print(azure_location["metadata"]["geographyGroup"], '-', azure_location["metadata"]["regionCategory"])
+            return temp_azure_geography_group_list[random.randint(0, len(temp_azure_geography_group_list)-1)]["name"]
 
 # get_azure_supported_locations - Lists all supported locations for Azure in the current subscription.
 def get_azure_supported_locations():
@@ -72,7 +47,7 @@ def get_azure_location_detail(azure_location_name):
         if azure_location["name"] == azure_location_name:
             return azure_location
 
-# TODO: get_azure_supported_locations_sdk - Lists all supported locations for Azure in the current subscription via Azure SDK.
+# get_azure_supported_locations_sdk - Lists all supported locations for Azure in the current subscription via Azure SDK.
 def get_azure_supported_locations_sdk():
 
     # credentials =  ServicePrincipalCredentials(
@@ -80,11 +55,13 @@ def get_azure_supported_locations_sdk():
     #     secret=os.environ['AZURE_CLIENT_SECRET'],
     #     tenant=os.environ['AZURE_TENANT_ID']
     # )
+
     credentials =  ClientSecretCredential(
         client_id=os.environ['AZURE_CLIENT_ID'],
         client_secret=os.environ['AZURE_CLIENT_SECRET'],
         tenant_id=os.environ['AZURE_TENANT_ID']       
     )
+
     # credentials = DefaultAzureCredential(exclude_environment_credential=False)
     subscription_client = SubscriptionClient(credentials, api_version='2021-01-01')
 
