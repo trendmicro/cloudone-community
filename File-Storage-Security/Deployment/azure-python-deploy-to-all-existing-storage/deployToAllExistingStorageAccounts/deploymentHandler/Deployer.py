@@ -9,10 +9,7 @@ Modifications include
 """A deployer class to deploy a template on Azure"""
 import os.path
 import json
-from uuid_extensions import uuid7str
-from azure.common.credentials import ServicePrincipalCredentials
 from azure.identity import ClientSecretCredential
-from azure.identity import DefaultAzureCredential
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.resource.resources.models import DeploymentMode
 from azure.mgmt.resource.resources.models import Deployment
@@ -33,6 +30,7 @@ class Deployer(object):
         self.resource_group_name = resource_group_name
         # self.credentials = DefaultAzureCredential(exclude_environment_credential=False)
 
+        # TODO: Store credentials in the Azure Key Vault, instead of environment variables
         # print("\nClient ID : " + str(keyvault.get_secret_from_keyvault('FSS-AUTODEPLOY-CLIENT-ID')) + "\nClient Secret : " +  str(keyvault.get_secret_from_keyvault('FSS-AUTODEPLOY-CLIENT-SECRET')))
 
         # self.credentials = ServicePrincipalCredentials(
@@ -88,9 +86,7 @@ class Deployer(object):
         deployment_outputs = self.client.deployments.get(
             resource_group_name = self.resource_group_name,
             deployment_name = self.resource_group_name + '-dep'
-        )    
-
-        # print(str(deployment_outputs.properties.outputs))   
+        )
 
         return deployment_outputs.properties.outputs 
 
