@@ -1,6 +1,10 @@
 import json
+import logging
+from http.client import responses
 import urllib3
-http = urllib3.PoolManager()
+# http = urllib3.PoolManager()
+urllib3.disable_warnings()
+http = urllib3.PoolManager(cert_reqs='CERT_NONE', assert_hostname=False)
 
 import utils
 
@@ -16,6 +20,8 @@ def filter_stacks_by_subscription_id(subscription_id, cloudone_fss_stacks_output
     return cloudone_fss_stacks_output
 
 def get_scanner_stacks():
+    
+    r = None
     try:
         region = utils.get_cloudone_region()
         api_key = utils.get_cloudone_api_key()
@@ -32,20 +38,29 @@ def get_scanner_stacks():
                 },
 
             )
+
             if r.status == 200:
                 return json.loads(r.data)
-            else:
-                raise Exception("HTTP Request failure (code: " + str(r.status) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
-    except:
-        raise Exception("HTTP Request failure (code: " + str(r.status) + "). Check the logs for more information.")
+            else:                
+                logging.error("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
+                raise Exception("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
+    except:        
+        if r:
+            logging.error("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check the logs for more information.")
+            raise Exception("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check the logs for more information.")
+        else:
+            logging.error("HTTP Request failure. Check the logs for more information.")
+            raise Exception("HTTP Request failure. Check the logs for more information.")
 
 def get_storage_stacks():
+    
+    r = None
     try:    
         region = utils.get_cloudone_region()
         api_key = utils.get_cloudone_api_key()
 
         if region and api_key:
-            cloudone_fss_api_url = "https://filestorage.{}.cloudone.trendmicro.com/api".format(region)
+            cloudone_fss_api_url = "https://filestorage.{}.cloudone.trendmicro.com/api".format(region)            
 
             r = http.request(
                 "GET",
@@ -53,19 +68,27 @@ def get_storage_stacks():
                 headers={
                     "Authorization": "ApiKey " + api_key,
                     "Api-Version": "v1",
-                },
-
+                }
             )
+
             if r.status == 200:
                 return json.loads(r.data)
             else:
-                raise Exception("HTTP Request failure (code: " + str(r.status) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
-    except:
-        raise Exception("HTTP Request failure (code: " + str(r.status) + "). Check the logs for more information.")
+                logging.error("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
+                raise Exception("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
+    except:        
+        if r:
+            logging.error("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check the logs for more information.")
+            raise Exception("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check the logs for more information.")
+        else:
+            logging.error("HTTP Request failure. Check the logs for more information.")
+            raise Exception("HTTP Request failure. Check the logs for more information.")
 
 def map_scanner_stacks_to_azure_locations():
 
-    existing_scanner_stacks_dict = get_scanner_stacks()
+    subscription_id = utils.get_subscription_id()
+
+    existing_scanner_stacks_dict = filter_stacks_by_subscription_id(subscription_id, get_scanner_stacks())
 
     if existing_scanner_stacks_dict:
         locationsDict = {}
@@ -82,6 +105,8 @@ def map_scanner_stacks_to_azure_locations():
     return None
 
 def get_associated_storage_stacks_to_scanner_stack(scanner_stack_uuid):
+    
+    r = None
     try:    
         region = utils.get_cloudone_region()
         api_key = utils.get_cloudone_api_key()
@@ -101,12 +126,19 @@ def get_associated_storage_stacks_to_scanner_stack(scanner_stack_uuid):
             if r.status == 200:
                 return json.loads(r.data)
             else:
-                raise Exception("HTTP Request failure (code: " + str(r.status) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
+                logging.error("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
+                raise Exception("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
     except:
-        raise Exception("HTTP Request failure (code: " + str(r.status) + "). Check the logs for more information.")
+        if r:
+            logging.error("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check the logs for more information.")
+            raise Exception("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check the logs for more information.")
+        else:
+            logging.error("HTTP Request failure. Check the logs for more information.")
+            raise Exception("HTTP Request failure. Check the logs for more information.")
 
 def register_scanner_stack_with_cloudone(resource_group_id, tenant_id):
 
+    r = None
     try:    
         region = utils.get_cloudone_region()
         api_key = utils.get_cloudone_api_key()
@@ -123,8 +155,6 @@ def register_scanner_stack_with_cloudone(resource_group_id, tenant_id):
                 }
             }
 
-            # print(str(request_data))
-
             r = http.request(
                 "POST",
                 cloudone_fss_api_url + "/stacks",
@@ -137,12 +167,19 @@ def register_scanner_stack_with_cloudone(resource_group_id, tenant_id):
             if r.status == 200:
                 return json.loads(r.data)["stackID"]
             else:
-                raise Exception("HTTP Request failure (code: " + str(r.status) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
-    except:
-        raise Exception("HTTP Request failure (code: " + str(r.status) + "). Check the logs for more information.")
+                logging.error("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
+                raise Exception("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
+    except:        
+        if r:
+            logging.error("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check the logs for more information.")
+            raise Exception("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check the logs for more information.")
+        else:
+            logging.error("HTTP Request failure. Check the logs for more information.")
+            raise Exception("HTTP Request failure. Check the logs for more information.")        
 
 def register_storage_stack_with_cloudone(cloudone_scanner_stack_id, resource_group_id, tenant_id):
 
+    r = None
     try:    
         region = utils.get_cloudone_region()
         api_key = utils.get_cloudone_api_key()
@@ -160,8 +197,6 @@ def register_storage_stack_with_cloudone(cloudone_scanner_stack_id, resource_gro
                 }
             }
 
-            # print(str(request_data))
-
             r = http.request(
                 "POST",
                 cloudone_fss_api_url + "/stacks",
@@ -173,7 +208,13 @@ def register_storage_stack_with_cloudone(cloudone_scanner_stack_id, resource_gro
             )
             if r.status == 200:
                 return json.loads(r.data)
-            else:
-                raise Exception("HTTP Request failure (code: " + str(r.status) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
-    except:
-        raise Exception("HTTP Request failure (code: " + str(r.status) + "). Check the logs for more information.")
+            else:      
+                logging.error("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")         
+                raise Exception("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
+    except:        
+        if r:
+            logging.error("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check the logs for more information.")  
+            raise Exception("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check the logs for more information.")
+        else:
+            logging.error("HTTP Request failure. Check the logs for more information.")  
+            raise Exception("HTTP Request failure. Check the logs for more information.")   
