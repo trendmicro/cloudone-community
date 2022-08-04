@@ -1,27 +1,13 @@
 import logging
-from re import A
-
-import azure.functions as func
-from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobClient, BlobServiceClient
-from azure.storage.blob._shared.models import AccountSasPermissions
-from azure.storage.blob._shared_access_signature import BlobSharedAccessSignature
-from azure.mgmt.resource import ResourceManagementClient
-from azure.mgmt.storage import StorageManagementClient
-
-from datetime import datetime
 
 import utils
 import locations
 import storage_accounts
-import deployments
 import deployment_geographies
 import deployment_one_to_one
 import deployment_single
 
 # TODO: Remove unused code and dependencies
-# import resource_groups
-# import rbac
 
 '''
 This script requires an additional text file for storage accounts to exclude, found in the "exclude.txt" file
@@ -54,10 +40,10 @@ def main():
         --------------------------------------
 
         - getStorageAccounts() with the FSS_LOOKUP_TAG set to True -- DONE
-        - Iterate over each Storage Account and deploy atleast 1 Scanner Stack -- IN PROGRESS
-        - Iterate over each Storage Account and build Storage Stack and Associate Scanner Stack in the process -- IN PROGRESS
-        - Display warning on scalability of the Scanner Stack and Azure Service Quotas. Recommend to split into multiple Scanner Stacks by raising a support ticket
-        - Recommend scanning all existing blobs in the Storage Account(s) that are not scanned by FSS for reasons of compliance and better OpsSec 
+        - Iterate over each Storage Account and deploy atleast 1 Scanner Stack -- DONE
+        - Iterate over each Storage Account and build Storage Stack and Associate Scanner Stack in the process -- DONE
+        - Display warning on scalability of the Scanner Stack and Azure Service Quotas. Recommend to split into multiple Scanner Stacks by raising a support ticket - TODO
+        - Recommend scanning all existing blobs in the Storage Account(s) that are not scanned by FSS for reasons of compliance and better OpsSec - TODO
 
         Mind map (New Storage Accounts)
         ---------------------------------
@@ -72,34 +58,34 @@ def main():
         Note: All new blobs in the new Storage Account should be scanned by FSS as and when they are dumped in the Storage Account
     '''
 
-    # # Testing
-    # # TODO: Remove offline hacks
-    # print(str(cloudone_fss_api.map_scanner_stacks_to_azure_locations()))
-    # exit(0)
-
     subscription_id = utils.get_subscription_id()
 
     azure_supported_locations_obj_by_geography_groups_dict = locations.get_azure_supported_locations()
 
     # Get List of Storage Accounts to deploy FSS
     azure_storage_account_list = []
-    deployment_mode = utils.get_deployment_mode_from_env('DEPLOYMENT_MODE', DEPLOYMENT_MODES, DEFAULT_DEPLOYMENT_MODE)
 
-    if deployment_mode == 'existing':
+    deployment_mode = utils.get_deployment_mode_from_env('DEPLOYMENT_MODE', DEPLOYMENT_MODES, DEFAULT_DEPLOYMENT_MODE)
+    logging.info("Using Deployment Mode: ", str(deployment_mode))
+
+    if deployment_mode == 'existing':        
         azure_storage_account_list = storage_accounts.get_storage_accounts(FSS_LOOKUP_TAG)
 
         if azure_storage_account_list:
             azure_storage_account_list = utils.apply_exclusions(exclusion_file_name, azure_storage_account_list)            
         else:
+            logging.error('No Storage Account(s) match the \"' + FSS_LOOKUP_TAG + '\" tag. Exiting ...')
             raise Exception('No Storage Account(s) match the \"' + FSS_LOOKUP_TAG + '\" tag. Exiting ...')
 
         if azure_storage_account_list:
             azure_storage_account_list = utils.remove_storage_accounts_with_cloudone_storage_stacks(azure_storage_account_list)
         else:
+            logging.error('No Storage Account(s) match the \"' + FSS_LOOKUP_TAG + '\" tag. Exiting ...')
             raise Exception('No Storage Account(s) match the \"' + FSS_LOOKUP_TAG + '\" tag. Exiting ...')
 
     else: # deployment_mode == 'new'        
-        # # TODO: Build an event listener to trigger deployment based on Storage Account creation events.
+        # TODO: Build an event listener to trigger deployment based on Storage Account creation events.
+        logging.warn('Deploying to new storage account based on an event listener is yet to be built into this tool.')
         raise Exception('Deploying to new storage account based on an event listener is yet to be built into this tool.')
 
     # Get Deployment Model - geographies, one-to-one or  single
@@ -107,25 +93,23 @@ def main():
 
     if deployment_model == 'geographies':
 
-        scanner_stacks_map_by_geographies_dict, storage_stacks_map_by_geographies_dict = deployments.build_geography_dict(azure_supported_locations_obj_by_geography_groups_dict, azure_storage_account_list)
+        logging.info("Executing deployments geographically...")
 
-        print("\nscanner_stacks_map_by_geographies_dict - " + str(scanner_stacks_map_by_geographies_dict) + "\n")
-        print("\nstorage_stacks_map_by_geographies_dict - " + str(storage_stacks_map_by_geographies_dict) + "\n")        
+        subscription_id = utils.get_subscription_id()
 
-        # Scanner and Storage Stack Maps are built. Now, let's deploy.            
-        # Deploy FSS Scanner Stacks for the different geographies we have storage accounts
-        deployments.deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, scanner_stacks_map_by_geographies_dict, storage_stacks_map_by_geographies_dict) # TODO: Fix this description. Subscription Id, Existing Scanner stacks so we dont recreate one for the geography, list of geographies we need Scanner stacks in (might overlap with existing), storage accounts that exist without a scanner-storage stack
-
-        # # FSS Storage Stack Deployment
-        # deployments.deploy_fss_storage_stack(subscription_id,  azure_storage_account_list)
+        deployment_geographies.deploy_geographically(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, FSS_SUPPORTED_REGIONS, azure_storage_account_list)
 
     elif deployment_model == 'one-to-one':
+
+        logging.info("Executing deployments one by one (1 storage stack <=> 1 scanner stack)...")
 
         subscription_id = utils.get_subscription_id()
 
         deployment_one_to_one.deploy_one_to_one(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, FSS_SUPPORTED_REGIONS, azure_storage_account_list)
 
     elif deployment_model == 'single':
+
+        logging.info("Executing deployments in single (all storage stacks are mapped to 1 scanner stack)...")
 
         subscription_id = utils.get_subscription_id()
 
