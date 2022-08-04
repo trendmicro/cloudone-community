@@ -1,6 +1,7 @@
 import os
 import json
 import tempfile
+import logging
 
 from azure.cli.core import get_default_cli
 # from munch import DefaultMunch 
@@ -48,13 +49,15 @@ def azure_cli_run_command(command):
     if cli.result.result:
         return cli.result.result
     elif cli.result.error:
+        logging.error(cli.result.error)
         raise Exception(cli.result.error)
     return None
 
 # apply_exclusions - get list of storage accounts to exclude from deployment
 def apply_exclusions(filename, azure_storage_account_list):
     if not os.path.isfile(filename):
-        raise Exception("\n\tNo file for exclusions. File 'exclude.txt' not found.\n")
+        logging.error("No file for exclusions. File 'exclude.txt' not found.\n")
+        raise Exception("No file for exclusions. File 'exclude.txt' not found.\n")
     else:
         content = []
         with open(filename) as f:
@@ -71,9 +74,9 @@ def apply_exclusions(filename, azure_storage_account_list):
             for item in temp_list:
                 temp_list_names += str(item["name"]) + ", "
 
-            print('\n\tExcluding ' + str(len(temp_list)) + ' storage accounts [' + temp_list_names + '] as per the contents in exclude.txt')
+            logging.info('Excluding ' + str(len(temp_list)) + ' storage accounts [' + temp_list_names + '] as per the contents in exclude.txt')
         else:
-            print('\n\tExcluding ' + str(len(temp_list)) + ' storage accounts from the deployment')
+            logging.info('Excluding ' + str(len(temp_list)) + ' storage accounts from the deployment')
 
         for item in temp_list:
             azure_storage_account_list.remove(item)
@@ -114,7 +117,8 @@ def get_cloudone_region():
             return str(cloudone_config['region'])
     if 'CLOUDONE_REGION' in os.environ.keys():
         return os.environ.get('CLOUDONE_REGION')
-    return None
+    logging.error("Missing Cloud One Region. Check \"CLOUDONE_REGION\" env. variable or \"cloudone.region\" in the config.json file.")
+    raise Exception("Missing Cloud One Region. Check \"CLOUDONE_REGION\" env. variable or \"cloudone.region\" in the config.json file.")
     
 def get_cloudone_api_key():
     cloudone_config = get_config_from_file('cloudone')
@@ -123,7 +127,8 @@ def get_cloudone_api_key():
             return str(cloudone_config['api_key'])
     if 'CLOUDONE_API_KEY' in os.environ.keys():
         return os.environ.get('CLOUDONE_API_KEY')
-    return None
+    logging.error("Missing Cloud One API Key. Check \"CLOUDONE_API_KEY\" env. variable or \"cloudone.api_key\" in the config.json file.")
+    raise Exception("Missing Cloud One API Key. Check \"CLOUDONE_API_KEY\" env. variable or \"cloudone.api_key\" in the config.json file.")
 
 def get_cloudone_max_storage_to_scanner_count():
     cloudone_config = get_config_from_file('cloudone')
@@ -139,8 +144,9 @@ def get_subscription_id():
     if azure_subscription_id:
         return azure_subscription_id
     if 'AZURE_SUBSCRIPTION_ID' in os.environ.keys():
-        return os.environ.get('AZURE_SUBSCRIPTION_ID')
-    return None
+        return os.environ.get('AZURE_SUBSCRIPTION_ID')  
+    logging.error("Missing Azure Subscription ID. Check \"AZURE_SUBSCRIPTION_ID\" env. variable or \"subscription_id\" in the config.json file.")
+    raise Exception("Missing Azure Subscription ID. Check \"AZURE_SUBSCRIPTION_ID\" env. variable or \"subscription_id\" in the config.json file.")
 
 def get_subscription_id_from_resource_group_id(resource_group_id):
 
