@@ -1,9 +1,12 @@
+import logging
+
+import deployments
+import locations
 import geographies
 import cloudone_fss_api
+import utils
 
-def deploy_geographically(azure_supported_locations_obj_by_geography_groups_dict, azure_storage_account_list):
-    # Inventory of existing storage accounts
-    # unique_storage_account_geographies = geographies.get_geographies_from_storage_accounts(azure_storage_account_list, azure_supported_locations_obj_by_geography_groups_dict)
+def deploy_geographically(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, fss_supported_regions_list, azure_storage_account_list):
 
     # Scanner Stack Map
     scanner_stacks_map_by_geographies_dict = geographies.build_geographies_map_dict()  
@@ -11,110 +14,166 @@ def deploy_geographically(azure_supported_locations_obj_by_geography_groups_dict
     # Storage Stacks Map
     storage_stacks_map_by_geographies_dict = geographies.build_geographies_map_dict()      
 
-    # Populate the Scanner stack map by geographies
-    # Inventory of existing FSS scanner stacks by Azure location
-    existing_scanner_stacks_by_location = cloudone_fss_api.map_scanner_stacks_to_azure_locations()        
+    # Populate the Scanner stack map by geographies that are registered within this subscription
+    # Inventory of existing FSS scanner stacks in this subscription by Azure location
+    existing_scanner_stacks_by_location = cloudone_fss_api.map_scanner_stacks_to_azure_locations()
 
+    # If scanner stacks exist
     if existing_scanner_stacks_by_location:
 
-        print("\nScanner Stack Locations: " + str(existing_scanner_stacks_by_location))
-
-        # Fetching Geography groups for the existing storage stacks, building a map
-        
-        # for existing_scanner_stack_location in existing_scanner_stacks_by_location:
-
-            # geography = geographies.get_geography_group_from_location(existing_scanner_stack_location, azure_supported_locations_obj_by_geography_groups_dict)
-
-            # if geography not in scanner_stacks_map_by_geographies_dict:
-            #     scanner_stacks_map_by_geographies_dict.update({geography: []}) # { "US": [], "Europe" [], ...} only existing scanner stack in the azure location
-
-        # print("\nAll Geos where scanner stack exists: " + str(scanner_stacks_map_by_geographies_dict))
-
+        # Existing scanner stack location by location
         for existing_scanner_stack_by_location in existing_scanner_stacks_by_location:
 
+            # Get scanner stack geography
             scanner_stack_geography = geographies.get_geography_group_from_location(existing_scanner_stack_by_location, azure_supported_locations_obj_by_geography_groups_dict)
 
+            # Build a geographical map of scanner stacks
             scanner_stacks_map_by_geographies_dict[scanner_stack_geography] = existing_scanner_stacks_by_location[existing_scanner_stack_by_location]
 
-    # ----
+    # TODO: Remove any scanner stacks that violate the 50:1 Storage to Scanner stack ratio
+    for scanner_stack_geography in scanner_stacks_map_by_geographies_dict:
 
-    # # Building Geos with locations map
-    # temp_existing_scanner_stack_location_list = []
-    # temp_new_scanner_stack_location_list = []
+        for scanner_stack in scanner_stacks_map_by_geographies_dict[scanner_stack_geography]:
 
-    # # Cycle through everywhere we need a storage stack deployed for the storage account
-    # for storage_account in azure_storage_account_list:
+            print(str(scanner_stack))
 
-    #     # Cycle through all the Azure locations we have scanner stacks
-    #     for existing_scanner_stack_location in existing_scanner_stacks_by_location:
+    # If storage stacks exist
+    if azure_storage_account_list:
 
-    #         # If they correlate, map storage accounts to existing scanner stacks locations
-    #         print(str(storage_account["location"]), str(existing_scanner_stack_location))
-    #         if storage_account["location"] == existing_scanner_stack_location:
+        # Existing storage account
+        for storage_account in azure_storage_account_list:
 
-    #             temp_existing_scanner_stack_location_list.append(storage_account)
+            # Get storage stack geography
+            storage_stack_geography = geographies.get_geography_group_from_location(storage_account["location"], azure_supported_locations_obj_by_geography_groups_dict)
 
-    #         # No correlation, mark them for new scanner stack deployment
-    #         else:
-    #             temp_new_scanner_stack_location_list.append(storage_account)
+            temp_storage_stacks_by_geographies_list = storage_stacks_map_by_geographies_dict[storage_stack_geography]
 
-    # for geography in scanner_stacks_map_by_geographies_dict:
-
-    #             # scanner_stacks_map_by_geographies_dict[geography].append({existing_scanner_stack_location: temp_existing_scanner_stack_location_list}) # { "US": [{"eastus": [...]}], "Europe": []}   
-
-    #     scanner_stacks_map_by_geographies_dict[geography].append(temp_existing_scanner_stack_location_list)
-
-    # for storage_account in temp_new_scanner_stack_location_list:
-
-    #     print("\nNew Scanner Stack required: " + str(storage_account["location"]))
-
-    #     geography = geographies.get_geography_group_from_location(storage_account["location"], azure_supported_locations_obj_by_geography_groups_dict)
-
-    #     if geography not in scanner_stacks_map_by_geographies_dict:
-
-    #         print("\nNew Scanner Stack Geography: " + str(geography))
-
-    #         scanner_stacks_map_by_geographies_dict.update({geography: []}) # { "Middle East": [], "Europe" [], ...} new scanner stack geographies mapping
-        
-    #         print("\nUpdating Scanner Stack Geography: " + str(geography))
-    #         scanner_stacks_map_by_geographies_dict[geography].append({storage_account["location"]: temp_existing_scanner_stack_location_list})
-
-    # ----        
+            temp_storage_stacks_by_geographies_list.append(storage_account)
+            storage_stacks_map_by_geographies_dict[storage_stack_geography] = temp_storage_stacks_by_geographies_list
 
     # Populate the Storage stack map by geographies
-    for storage_account in azure_storage_account_list:
+    # Iterate storage accounts in Azure
+    for storage_account_geography in storage_stacks_map_by_geographies_dict:
 
-        if existing_scanner_stacks_by_location:
+        # Get storage account geography
+        # storage_account_geography = geographies.get_geography_group_from_location(storage_account["location"], azure_supported_locations_obj_by_geography_groups_dict)
 
-            for existing_scanner_stack_by_location in existing_scanner_stacks_by_location:
+        cloudone_scanner_stack_id = scanner_stack_identity_principal_id = scanner_stack_queue_namespace = None
 
-                # if "storageStacks" not in existing_scanner_stacks_by_location[existing_scanner_stack_by_location][0].keys():
+        for scanner_stack_geography in scanner_stacks_map_by_geographies_dict:
 
-                #         existing_scanner_stacks_by_location[existing_scanner_stack_by_location][0]["storageStacks"] = []
+            if storage_stacks_map_by_geographies_dict[storage_account_geography]:
+                
+                if storage_account_geography == scanner_stack_geography: 
 
-                existing_scanner_stack_geography = geographies.get_geography_group_from_location(existing_scanner_stacks_by_location[existing_scanner_stack_by_location][0]["details"]["region"], azure_supported_locations_obj_by_geography_groups_dict)
-                storage_account_geography = geographies.get_geography_group_from_location(storage_account["location"], azure_supported_locations_obj_by_geography_groups_dict)
+                    # If a scanner stack exists, then map to storage stack in the geography
+                    if scanner_stacks_map_by_geographies_dict[scanner_stack_geography]:
 
-                if existing_scanner_stack_geography == storage_account_geography:
+                        cloudone_scanner_stack_id = scanner_stacks_map_by_geographies_dict[scanner_stack_geography][0]["stackID"]
+                        scanner_stack_identity_principal_id = scanner_stacks_map_by_geographies_dict[scanner_stack_geography][0]["details"]["scannerIdentityPrincipalID"]
+                        scanner_stack_queue_namespace = scanner_stacks_map_by_geographies_dict[scanner_stack_geography][0]["details"]["scannerQueueNamespace"]
 
-                    temp_storage_stacks_dict = storage_stacks_map_by_geographies_dict[existing_scanner_stack_geography]                    
+                        for storage_account in storage_stacks_map_by_geographies_dict[storage_account_geography]:
 
-                    temp_storage_stacks_dict.append(storage_account)
+                            # Deploy Storage Stack for the storage_account, Associate to previously identified existing scanner stack
+                            if cloudone_scanner_stack_id and scanner_stack_identity_principal_id and scanner_stack_queue_namespace:     
 
-                    storage_stacks_map_by_geographies_dict[existing_scanner_stack_geography] = temp_storage_stacks_dict
+                                # storage_stack_deployment_outputs = 
+                                deployments.deploy_fss_storage_stack(
+                                    subscription_id, 
+                                    storage_account, 
+                                    cloudone_scanner_stack_id, 
+                                    scanner_stack_identity_principal_id, 
+                                    scanner_stack_queue_namespace
+                                )
 
-                    print("\nFound a match... " + str(existing_scanner_stack_geography) + " = " + str(storage_account_geography))
+                                # if storage_stack_deployment_outputs:
+                                #     print("\tstorage_stack_deployment_outputs - " + str(storage_stack_deployment_outputs))
+
+                            else:
+                                logging.error("Deployment Failed. The deployment did not create any output(s). Check deployment status for more details on how to troubleshoot this issue.")
+                                raise Exception("Deployment Failed. The deployment did not create any output(s). Check deployment status for more details on how to troubleshoot this issue.")
+
+                    # If no scanner stacks exist, deploy one
+                    else:
+
+                        azure_recommended_location = locations.get_azure_recommended_location_by_geography_group(storage_account_geography, azure_supported_locations_obj_by_geography_groups_dict, fss_supported_regions_list)
+
+                        # Deploy One Scanner Stack
+                        scanner_stack_deployment_outputs = deployments.deploy_fss_scanner_stack(
+                            subscription_id, 
+                            azure_supported_locations_obj_by_geography_groups_dict, 
+                            azure_recommended_location, 
+                            fss_supported_regions_list, 
+                            scanner_stack_name = "fss-scanner-" + storage_account_geography + "-" + utils.trim_location_name(azure_recommended_location) + "-geo-autodeploy"
+                        )
+
+                        if scanner_stack_deployment_outputs:
+
+                            cloudone_scanner_stack_id = scanner_stack_deployment_outputs["cloudOneScannerStackId"]
+                            cloudone_scanner_stack_name = str(scanner_stack_deployment_outputs["scannerStackResourceGroupID"]["value"]).split("/")[-1:][0]
+                            cloudone_scanner_stack_tenant_id = scanner_stack_deployment_outputs["tenantID"]["value"]
+                            cloudone_scanner_stack_resource_group_id = scanner_stack_deployment_outputs["scannerStackResourceGroupID"]["value"]
+                            scanner_stack_queue_namespace = scanner_stack_deployment_outputs["scannerQueueNamespace"]["value"]
+                            cloudone_scanner_stack_region = scanner_stack_deployment_outputs["cloudOneRegion"]["value"]
+                            scanner_stack_identity_principal_id = scanner_stack_deployment_outputs["scannerIdentityPrincipalID"]["value"]
+
+                            temp_stack_output_skeleton = {
+                                "stackID": cloudone_scanner_stack_id,
+                                "name": cloudone_scanner_stack_name,
+                                "details": {
+                                    "tenantID": cloudone_scanner_stack_tenant_id,
+                                    "resourceGroupID": cloudone_scanner_stack_resource_group_id,
+                                    "scannerQueueNamespace": scanner_stack_queue_namespace,
+                                    "region": cloudone_scanner_stack_region,
+                                    "scannerIdentityPrincipalID": scanner_stack_identity_principal_id
+                                },
+                                "provider": "azure",
+                                "type": "scanner"
+                            }
+
+                            temp_scanner_stacks_by_geography = None
+                            if scanner_stacks_map_by_geographies_dict[scanner_stack_geography]:
+                                temp_scanner_stacks_by_geography = scanner_stacks_map_by_geographies_dict[scanner_stack_geography]
+                                temp_scanner_stacks_geography_list = []
+                                temp_scanner_stacks_geography_list = scanner_stacks_map_by_geographies_dict[scanner_stack_geography]
+                                temp_scanner_stacks_geography_list.append(temp_stack_output_skeleton)
+                                temp_scanner_stacks_by_geography.update({storage_account_geography: temp_scanner_stacks_geography_list})
+                            else:
+                                temp_scanner_stacks_by_geography = {}
+                                temp_scanner_stacks_by_geography.update({scanner_stack_geography: [temp_stack_output_skeleton]})
+                            
+                            scanner_stacks_map_by_geographies_dict[scanner_stack_geography] = temp_scanner_stacks_by_geography    
+
+
+                        else:
+                            # TODO: In these scenarios, use try...except to throw exceptions
+                            logging.error("Deployment Failed. The deployment did not create any output(s). Check deployment status for more details on how to troubleshoot this issue.")
+                            raise Exception("Deployment Failed. The deployment did not create any output(s). Check deployment status for more details on how to troubleshoot this issue.")
+
+                        # Deploy Storage Stack for the storage_account, Associate to previously identified existing scanner stack
+                        if cloudone_scanner_stack_id and scanner_stack_identity_principal_id and scanner_stack_queue_namespace:
+
+                            for storage_account in storage_stacks_map_by_geographies_dict[storage_account_geography]:    
+
+                                # storage_stack_deployment_outputs = 
+                                deployments.deploy_fss_storage_stack(
+                                    subscription_id, 
+                                    storage_account, 
+                                    cloudone_scanner_stack_id, 
+                                    scanner_stack_identity_principal_id, 
+                                    scanner_stack_queue_namespace
+                                )
+
+                                # if storage_stack_deployment_outputs:
+                                #     print(str(storage_stack_deployment_outputs))
+
+                        else:
+                            # TODO: In these scenarios, use try...except to throw exceptions
+                            logging.error("Deployment Failed. The deployment did not create any output(s). Check deployment status for more details on how to troubleshoot this issue.")
+                            raise Exception("Deployment Failed. The deployment did not create any output(s). Check deployment status for more details on how to troubleshoot this issue.")
 
                 else:
-                    print("\nFound a mismatch... " + str(existing_scanner_stack_geography) + " ~ " + str(storage_account_geography))
-        else:
-            storage_account_geography = geographies.get_geography_group_from_location(storage_account["location"], azure_supported_locations_obj_by_geography_groups_dict)
-
-            temp_storage_stacks_dict = storage_stacks_map_by_geographies_dict[storage_account_geography]                    
-
-            temp_storage_stacks_dict.append(storage_account)
-
-            storage_stacks_map_by_geographies_dict[storage_account_geography] = temp_storage_stacks_dict
-
-
-    return scanner_stacks_map_by_geographies_dict, storage_stacks_map_by_geographies_dict
+                    logging.info("Found a geography mismatch... " + str(scanner_stack_geography) + " ~ " + str(storage_account_geography) + ". Retrying...")
+            else:
+                    logging.info("Skipping '" + str(scanner_stack_geography) + "' geography as no new storage stacks are needed in this region... ")
