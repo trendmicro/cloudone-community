@@ -22,3 +22,15 @@ variable "c1-api-key" {
   description = "Cloud One Api Key"
   default = "PLEASE_CHANGE_ME"
 }
+
+variable "policy-prefix" {
+  type = string
+  description = "IAM policy prefix"
+  default = "war-policy-"
+}
+
+variable "role-prefix" {
+  type = string
+  description = "IAM role prefix"
+  default = "war-role-"
+}

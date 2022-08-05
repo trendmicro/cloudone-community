@@ -3,7 +3,7 @@ data "conformity_external_id" "all"{}
 
 # Create IAM policy
 resource "aws_iam_policy" "well-architected-tool-policy" {
-  name_prefix = "war-policy-"
+  name_prefix = var.policy-prefix
   description = "CloudOne Well-Architected IAM policy"
   policy = jsonencode({
   "Version": "2012-10-17",
@@ -25,7 +25,7 @@ resource "aws_iam_policy" "well-architected-tool-policy" {
 
 # Create IAM role
 resource "aws_iam_role" "well-architected-tool-role" {
-  name_prefix = "war-role-"
+  name_prefix = var.role-prefix
   assume_role_policy = jsonencode({
   "Version": "2012-10-17",
   "Statement": [
