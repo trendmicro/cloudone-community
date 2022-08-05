@@ -25,7 +25,7 @@ To know more about the Well-Architect Review, check this [Blog Post](https://new
 
     To install terraform, follow this [Guide](https://learn.hashicorp.com/tutorials/terraform/install-cli#install-terraform)
 
-    First you need to provide in the terraform template:
+    First you need to provide in the terraform template (variables.tf file):
     - Cloud One API Key with `full-access` permissions
     - Cloud One Region
     - Well-Architected Workload
