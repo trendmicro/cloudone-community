@@ -1,6 +1,6 @@
-# DS Agents Deploy Automation using Lambda 
+# Cloud One Workload Security Agents Deploy Automation using Lambda 
 
-Automation process to deploy, activate, and check the Deep Security Agents using Lambda function and State Manger Association from AWS
+Automation process to deploy, activate, and check the Cloud One Workload Security Agents using Lambda function and State Manger Association from AWS
 
 ![](Architecture_version2.png)
  
