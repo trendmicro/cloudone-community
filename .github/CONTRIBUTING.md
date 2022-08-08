@@ -1,4 +1,4 @@
-# Contributing to solutions-architect
+# Contributing to cloudone-community
 
 :tada: Thank you for taking the time to contribute! :tada:
 
