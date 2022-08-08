@@ -1,0 +1,29 @@
+{
+  "name": "cloud-one-workload-security-iam",
+  "version": "0.1.0",
+  "bin": {
+    "cloud-one-workload-security-iam": "bin/cloud-one-workload-security-iam.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk",
+    "synth": "npm run build && cdk synth"
+  },
+  "devDependencies": {
+    "@aws-cdk/assert": "^1.167.0",
+    "@types/jest": "^25.2.1",
+    "@types/node": "10.17.5",
+    "aws-cdk": "^1.167.0",
+    "jest": "^28.1.3",
+    "ts-jest": "^25.3.1",
+    "ts-node": "^8.1.0",
+    "typescript": "~3.7.2"
+  },
+  "dependencies": {
+    "@aws-cdk/aws-iam": "^1.47.1",
+    "@aws-cdk/core": "1.47.1",
+    "source-map-support": "^0.5.16"
+  }
+}
