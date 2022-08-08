@@ -208,7 +208,7 @@ Resources:
                               },
                           ]
                       )
-      Runtime: python3.6
+      Runtime: python3.8
       MemorySize: 128
       Timeout: '300'
       Environment:
@@ -649,29 +649,28 @@ Parameters:
   TenantID:
     Type: String
     Default: ''
-    Description: Enter with the TenantID from your Deep Security Console
+    Description: Enter with the TenantID from your Cloud One Workload Security Console
   Token:
     Type: String
     Default: ''
-    Description: Enter with the Token from your Deep Security Console
+    Description: Enter with the Token from your Cloud One Workload Security Console
   DSHostname:
     Type: String
     Default: app.deepsecurity.trendmicro.com
     Description: >-
       Enter with the FQDN from your Deep Security Console if is On-Premise or
-      keep the default FQDN if you are using DSaaS. Example (app.deepsecurity.trendmicro.com)
+      keep the default FQDN if you are using Cloud One Workload Security. Example (app.deepsecurity.trendmicro.com)
   DSPort:
     Type: String
     Default: '443'
     Description: >-
       Enter the port number of the Deep Security Manager. If using the installed
       software package, enter 4120 or the port accessible externally. Port 443
-      is used as default if no value is provided. Please keep 443 if using Deep
-      Security as a service
+      is used as default if no value is provided. Please keep 443 if using Cloud One Workload Security
   DSHostnameAgent:
     Type: String
     Default: agents.deepsecurity.trendmicro.com
     Description: >-
       Enter the externally accessible DNS name of IP address of the Deep
       Security Manager to activate agents by CLI. Please enter keep
-      agents.deepsecurity.trendmicro.com if using Deep Security as a Services.
+      agents.deepsecurity.trendmicro.com if using Cloud One Workload Security.
