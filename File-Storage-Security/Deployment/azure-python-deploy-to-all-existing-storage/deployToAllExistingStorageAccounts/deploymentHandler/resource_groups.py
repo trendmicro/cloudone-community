@@ -18,6 +18,6 @@
 #         }
 #     )
 
-#     logging.info(f"Provisioned resource group {resource_group.name} in the {resource_group.location} region")
+#     logging.info("Provisioned resource group {resource_group.name} in the {resource_group.location} region")
 
 #     return resource_group_name
