@@ -8,6 +8,7 @@ import deployment_one_to_one
 import deployment_single
 
 # TODO: Remove unused code and dependencies
+logging.basicConfig(filename="handler.log", level=logging.INFO)
 
 '''
 This script requires an additional text file for storage accounts to exclude, found in the "exclude.txt" file
@@ -30,8 +31,6 @@ DEPLOYMENT_MODELS = {
 DEFAULT_DEPLOYMENT_MODEL = 'geographies'
 
 FSS_LOOKUP_TAG = 'AutoDeployFSS'
-# TODO: Add tags to FSS deployed stacks/resources
-FSS_MONITORED_TAG = 'FSSMonitored'
 FSS_SUPPORTED_REGIONS = ["centralus", "eastus", "eastus2", "southcentralus", "westus", "westus2", "centralindia", "eastasia", "japaneast", "koreacentral", "southeastasia", "francecentral", "germanywestcentral", "northeurope", "switzerlandnorth", "uksouth", "westeurope", "uaenorth", "brazilsouth"] # List last updated on 2022-07-19T11:32:11-04:00, from https://cloudone.trendmicro.com/docs/file-storage-security/supported-azure/
 
 def main():
@@ -59,14 +58,13 @@ def main():
     '''
 
     subscription_id = utils.get_subscription_id()
-
     azure_supported_locations_obj_by_geography_groups_dict = locations.get_azure_supported_locations()
 
     # Get List of Storage Accounts to deploy FSS
     azure_storage_account_list = []
 
     deployment_mode = utils.get_deployment_mode_from_env('DEPLOYMENT_MODE', DEPLOYMENT_MODES, DEFAULT_DEPLOYMENT_MODE)
-    logging.info("Using Deployment Mode: ", str(deployment_mode))
+    logging.info("Using Deployment Mode: " + str(deployment_mode))
 
     if deployment_mode == 'existing':        
         azure_storage_account_list = storage_accounts.get_storage_accounts(FSS_LOOKUP_TAG)
@@ -85,7 +83,7 @@ def main():
 
     else: # deployment_mode == 'new'        
         # TODO: Build an event listener to trigger deployment based on Storage Account creation events.
-        logging.warn('Deploying to new storage account based on an event listener is yet to be built into this tool.')
+        logging.warning('Deploying to new storage account based on an event listener is yet to be built into this tool.')
         raise Exception('Deploying to new storage account based on an event listener is yet to be built into this tool.')
 
     # Get Deployment Model - geographies, one-to-one or  single
