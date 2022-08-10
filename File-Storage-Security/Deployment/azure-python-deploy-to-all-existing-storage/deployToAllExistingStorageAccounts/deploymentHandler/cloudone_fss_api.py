@@ -22,9 +22,10 @@ def filter_stacks_by_subscription_id(subscription_id, cloudone_fss_stacks_output
 def get_scanner_stacks():
     
     r = None
-    try:
-        region = utils.get_cloudone_region()
-        api_key = utils.get_cloudone_api_key()
+    try:        
+        region = utils.get_config_from_file('cloudone.region')
+        api_key = utils.get_config_from_file('cloudone.api_key')
+        
         
         if region and api_key:
             cloudone_fss_api_url = "https://filestorage.{}.cloudone.trendmicro.com/api".format(region)
@@ -55,9 +56,9 @@ def get_scanner_stacks():
 def get_storage_stacks():
     
     r = None
-    try:    
-        region = utils.get_cloudone_region()
-        api_key = utils.get_cloudone_api_key()
+    try:            
+        region = utils.get_config_from_file('cloudone.region')
+        api_key = utils.get_config_from_file('cloudone.api_key')
 
         if region and api_key:
             cloudone_fss_api_url = "https://filestorage.{}.cloudone.trendmicro.com/api".format(region)            
@@ -107,9 +108,9 @@ def map_scanner_stacks_to_azure_locations():
 def get_associated_storage_stacks_to_scanner_stack(scanner_stack_uuid):
     
     r = None
-    try:    
-        region = utils.get_cloudone_region()
-        api_key = utils.get_cloudone_api_key()
+    try:            
+        region = utils.get_config_from_file('cloudone.region')
+        api_key = utils.get_config_from_file('cloudone.api_key')
         
         if region and api_key:
             cloudone_fss_api_url = "https://filestorage.{}.cloudone.trendmicro.com/api".format(region)
@@ -139,9 +140,9 @@ def get_associated_storage_stacks_to_scanner_stack(scanner_stack_uuid):
 def register_scanner_stack_with_cloudone(resource_group_id, tenant_id):
 
     r = None
-    try:    
-        region = utils.get_cloudone_region()
-        api_key = utils.get_cloudone_api_key()
+    try:            
+        region = utils.get_config_from_file('cloudone.region')
+        api_key = utils.get_config_from_file('cloudone.api_key')
         
         if region and api_key:
             cloudone_fss_api_url = "https://filestorage.{}.cloudone.trendmicro.com/api".format(region)
@@ -180,9 +181,9 @@ def register_scanner_stack_with_cloudone(resource_group_id, tenant_id):
 def register_storage_stack_with_cloudone(cloudone_scanner_stack_id, resource_group_id, tenant_id):
 
     r = None
-    try:    
-        region = utils.get_cloudone_region()
-        api_key = utils.get_cloudone_api_key()
+    try:            
+        region = utils.get_config_from_file('cloudone.region')
+        api_key = utils.get_config_from_file('cloudone.api_key')
         
         if region and api_key:
             cloudone_fss_api_url = "https://filestorage.{}.cloudone.trendmicro.com/api".format(region)
