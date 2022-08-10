@@ -2,7 +2,7 @@
  variable "region" {
    type = string
    description = "AWS region"
-   default = "PLEASE_CHANGE_ME"
+   default = "us-east-1"
  }
 
  variable "aws-account-id" {
