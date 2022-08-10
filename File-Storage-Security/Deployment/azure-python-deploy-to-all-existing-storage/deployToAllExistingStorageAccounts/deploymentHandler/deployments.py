@@ -12,8 +12,8 @@ def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_g
 
     # File Storage Security Scanner Stack deployment templates can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Scanner-Stack-Template.json or in the ./templates directory
 
-    app_id = str(utils.get_config_from_file("app_id"))
-    cloudone_region = str(utils.get_cloudone_region())
+    app_id = str(utils.get_config_from_file('app_id'))    
+    cloudone_region = utils.get_config_from_file('cloudone.region')
 
     if app_id and cloudone_region:
 
@@ -30,6 +30,7 @@ def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_g
         if not geography_group_name:
             geography_group_name = geographies.get_geography_group_from_location(azure_location, azure_supported_locations_obj_by_geography_groups_dict)
 
+        # TODO: Check existing names and increment if name already exists
         if not scanner_stack_name:            
             scanner_stack_name = "fss-scanner-" + geography_group_name + "-" + azure_location + "-geo-autodeploy"
         if not resource_group_name:
@@ -66,8 +67,8 @@ def deploy_fss_storage_stack(subscription_id, storage_account, cloudone_scanner_
 
     # File Storage Security Storage Stack deployment template can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Storage-Stack-Template.json or in the ./templates directory
 
-    app_id = str(utils.get_config_from_file("app_id"))
-    cloudone_region = str(utils.get_cloudone_region())
+    app_id = str(utils.get_config_from_file('app_id'))    
+    cloudone_region = utils.get_config_from_file('cloudone.region')
 
     if not storage_stack_name:
         storage_stack_name = "fss-storage-" + utils.trim_location_name(storage_account["location"]) + "-" + utils.trim_resource_name(storage_account["name"], 12, 12) +  "-autodeploy"
@@ -144,16 +145,12 @@ def build_geography_dict(azure_supported_locations_obj_by_geography_groups_dict,
 
             for existing_scanner_stack_by_location in existing_scanner_stacks_by_location:
 
-                # if "storageStacks" not in existing_scanner_stacks_by_location[existing_scanner_stack_by_location][0].keys():
-
-                #         existing_scanner_stacks_by_location[existing_scanner_stack_by_location][0]["storageStacks"] = []
-
                 existing_scanner_stack_geography = geographies.get_geography_group_from_location(existing_scanner_stacks_by_location[existing_scanner_stack_by_location][0]["details"]["region"], azure_supported_locations_obj_by_geography_groups_dict)
                 storage_account_geography = geographies.get_geography_group_from_location(storage_account["location"], azure_supported_locations_obj_by_geography_groups_dict)
 
                 if existing_scanner_stack_geography == storage_account_geography:
 
-                    temp_storage_stacks_dict = storage_stacks_map_by_geographies_dict[existing_scanner_stack_geography]                    
+                    temp_storage_stacks_dict = storage_stacks_map_by_geographies_dict[existing_scanner_stack_geography]          
 
                     temp_storage_stacks_dict.append(storage_account)
 
