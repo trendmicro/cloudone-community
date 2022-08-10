@@ -8,6 +8,4 @@ azure-mgmt-subscription==3.0.0
 azure-mgmt-storage==20.0.0
 azure-keyvault-secrets==4.4.0
 urllib3==1.26.9
-argparse==1.4.0
-uuid7==0.1.0
-munch==2.5.0
+glom==22.1.0
