@@ -26,7 +26,6 @@ def deploy_one_to_one(subscription_id, azure_supported_locations_obj_by_geograph
             scanner_stack_queue_namespace = scanner_stack_deployment_outputs["scannerQueueNamespace"]["value"]
 
         else:
-            # TODO: In these scenarios, use try...except to throw exceptions
             logging.error("Deployment Failed. The deployment did not create any output(s). Check deployment status for more details on how to troubleshoot this issue.")
             raise Exception("Deployment Failed. The deployment did not create any output(s). Check deployment status for more details on how to troubleshoot this issue.")
 
