@@ -14,8 +14,11 @@ from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.resource.resources.models import DeploymentMode
 from azure.mgmt.resource.resources.models import Deployment
 from azure.mgmt.resource.resources.models import DeploymentProperties
+import datetime
 
-import keyvault
+import utils
+
+FSS_MONITORED_TAG = 'FSSMonitored'
 
 class Deployer(object):
     """ Initialize the deployer class with subscription, resource group and public key.
@@ -47,10 +50,14 @@ class Deployer(object):
 
     def deploy(self, azure_location, stack_type, stack_params={}):
         """Deploy the template to a resource group."""
+
+        deployment_tags = utils.get_deployment_tags()
+
         self.client.resource_groups.create_or_update(
             self.resource_group_name,
             {
-                'location': azure_location
+                'location': azure_location,
+                'tags': deployment_tags
             }
         )
 
@@ -75,18 +82,47 @@ class Deployer(object):
             parameters = parameters
         )
 
-        # TODO: Tag your deployments so you can keep track
-        deployment_async_operation = self.client.deployments.begin_create_or_update(
-            resource_group_name = self.resource_group_name,
-            deployment_name = self.resource_group_name + '-dep',
-            parameters = Deployment(properties = deployment_properties)
-        )
+        if deployment_tags:
+            deployment_async_operation = self.client.deployments.begin_create_or_update(
+                resource_group_name = self.resource_group_name,
+                deployment_name = self.resource_group_name + '-dep',
+                parameters = Deployment(
+                    properties = deployment_properties,
+                    tags = deployment_tags
+                )
+            )
+        else:
+            deployment_async_operation = self.client.deployments.begin_create_or_update(
+                resource_group_name = self.resource_group_name,
+                deployment_name = self.resource_group_name + '-dep',
+                parameters = Deployment(
+                    properties = deployment_properties
+                )
+            )
+        
         deployment_async_operation.wait()
 
         deployment_outputs = self.client.deployments.get(
             resource_group_name = self.resource_group_name,
             deployment_name = self.resource_group_name + '-dep'
         )
+
+        # TODO: Tag them
+        # print("Resource Group List - " + str(utils.list_resources_in_resource_group(self.subscription_id, self.resource_group_name)))
+
+        # for resource in utils.list_resources_in_resource_group(self.subscription_id, self.resource_group_name):
+        #     print(str(resource))
+        
+        #  Tag the Storage Account as FSS_MONITORED_TAG = 'FSSMonitored'
+        if stack_type == "storage":
+
+            tags = {FSS_MONITORED_TAG: True, FSS_MONITORED_TAG + "Date": datetime.datetime.now().isoformat()}
+            tags.update(utils.get_deployment_tags())
+
+            storage_account_resource_group_name = utils.get_resource_group_name_from_resource_id(deployment_outputs.properties.outputs["blobStorageAccountResourceID"]["value"])
+            storage_account_name = utils.get_resource_name_from_resource_id(deployment_outputs.properties.outputs["blobStorageAccountResourceID"]["value"])
+
+            utils.tag_resource(self.subscription_id, storage_account_resource_group_name, storage_account_name, resource_type="storage_account", tags_dict=tags)
 
         return deployment_outputs.properties.outputs 
 

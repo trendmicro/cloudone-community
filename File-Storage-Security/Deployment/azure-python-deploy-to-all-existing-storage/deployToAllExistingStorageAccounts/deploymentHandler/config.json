@@ -11,5 +11,13 @@
     "azure_creds": {
         "key": "",
         "secret": ""
-    }
+    },
+    "deployment_tags": {
+        "DeployedBy": "AutoDeployFSS",
+        "Vendor": "Trend Micro",        
+        "Product": "Cloud One File Storage Security",
+        "SourceCode": "https://github.com/trendmicro/cloudone-filestorage-plugins"
+    },
+    "deployment_mode": "existing",
+    "deployment_model": "geographies"
 }
