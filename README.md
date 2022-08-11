@@ -14,9 +14,11 @@ We :heart: contributions from the community. To submit changes, please review th
 
 Some tips before you start contributing to this project:
 
-- The folder structure convention for this repo is '`/product-name/activity-name/{language}-your-script-foldername`'.
+- The folder structure convention for this repo is '`/product-name/activity-name/{cloud-provider}-{language}-your-script-foldername`'.
 
-> For example, `/Workload-Security/Migration/bash-hello-migration`
+> For example, `/Workload-Security/Integration/aws-cdk-workload-iam-stack`
+
+**Note:** The `{cloud-provider}` is mandatory for the cases that it's applied, such as `aws-cdk-workload-iam-stack`. For others cases is not necessary, but use your best judgement before submit the PR.
 
 - Recommended to create a README for your folder to make it easier for the community to make use of your script.
 - Writing separate test scripts in the `/tests` folder or having a built-in `dry-run` mode in the script to ensure everyone can test your script in their environment is much appreciated :)
