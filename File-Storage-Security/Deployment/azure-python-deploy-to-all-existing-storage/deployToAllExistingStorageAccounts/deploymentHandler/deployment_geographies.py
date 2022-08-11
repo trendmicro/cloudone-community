@@ -10,7 +10,8 @@ import utils
 def deploy_geographically(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, fss_supported_regions_list, azure_storage_account_list):    
 
     # Scanner Stack Map
-    scanner_stacks_map_by_geographies_dict = geographies.build_geographies_map_dict()  
+    scanner_stacks_map_by_geographies_dict = geographies.build_geographies_map_dict()
+    scanner_stack_names_list = []
 
     # Storage Stacks Map
     storage_stacks_map_by_geographies_dict = geographies.build_geographies_map_dict()      
@@ -18,6 +19,7 @@ def deploy_geographically(subscription_id, azure_supported_locations_obj_by_geog
     # Populate the Scanner stack map by geographies that are registered within this subscription
     # Inventory of existing FSS scanner stacks in this subscription by Azure location
     existing_scanner_stacks_by_location = cloudone_fss_api.map_scanner_stacks_to_azure_locations()    
+
 
     # If scanner stacks exist, add them to the Scanner Stack Map
     if existing_scanner_stacks_by_location:
@@ -30,6 +32,12 @@ def deploy_geographically(subscription_id, azure_supported_locations_obj_by_geog
 
             # Build a geographical map of existing scanner stacks
             scanner_stacks_map_by_geographies_dict[scanner_stack_geography] = existing_scanner_stacks_by_location[existing_scanner_stack_by_location]
+
+            # scanner_stack_names_list[scanner_stack_geography] = 
+            for scanner_stack  in existing_scanner_stacks_by_location[existing_scanner_stack_by_location]:
+                scanner_stack_names_list.append(scanner_stack["name"])
+
+    print(str(scanner_stack_names_list))
 
     # Remove any scanner stacks that violate the 50:1 Storage to Scanner stack ratio in this run
     max_storage_to_scanner_count = utils.get_config_from_file('cloudone.max_storage_stack_per_scanner_stack') - len(azure_storage_account_list)

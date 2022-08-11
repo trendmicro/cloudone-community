@@ -8,7 +8,7 @@ import cloudone_fss_api
 
 from Deployer import Deployer
 
-def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, azure_location, fss_supported_regions_list, azure_storage_account_name=None, scanner_stack_name=None, resource_group_name=None, geography_group_name=None):
+def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, azure_location, fss_supported_regions_list, scanner_stack_names_list=[], azure_storage_account_name=None, scanner_stack_name=None, resource_group_name=None, geography_group_name=None):
 
     # File Storage Security Scanner Stack deployment templates can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Scanner-Stack-Template.json or in the ./templates directory
 
@@ -30,10 +30,18 @@ def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_g
         if not geography_group_name:
             geography_group_name = geographies.get_geography_group_from_location(azure_location, azure_supported_locations_obj_by_geography_groups_dict)
 
-        # TODO: Check existing names and increment if name already exists
+        # Build a Scanner Stack name
         if not scanner_stack_name:            
             scanner_stack_name = "fss-scanner-" + geography_group_name + "-" + azure_location + "-geo-autodeploy"
         if not resource_group_name:
+            resource_group_name = scanner_stack_name + "-rg"
+
+        # Check existing names and increment if name already exists
+        if scanner_stack_name in scanner_stack_names_list:
+
+            scanner_stack_name_prefix = scanner_stack_name.split("geo") + "geo-"
+            match_list = [stack_name for stack_name in scanner_stack_names_list if scanner_stack_name_prefix in stack_name]
+            scanner_stack_name = scanner_stack_name_prefix + str(len(match_list) + 1) + "-autodeploy"
             resource_group_name = scanner_stack_name + "-rg"
 
         logging.info("Initializing the Deployer class with subscription id: {}, resource group: {} ...".format(subscription_id, resource_group_name))
