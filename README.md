@@ -14,7 +14,7 @@ We :heart: contributions from the community. To submit changes, please review th
 
 Some tips before you start contributing to this project:
 
-- The folder structure convention for this repo is '`/product-name/activity-name/{cloud-provider}-{language}-your-script-foldername`'.
+- The folder structure convention for this repo is '`/product-name/activity-name/{cloud-provider}-{language or framework}-your-script-foldername`'.
 
 > For example, `/Workload-Security/Integration/aws-cdk-workload-iam-stack`
 
