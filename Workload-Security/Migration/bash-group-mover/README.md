@@ -31,7 +31,7 @@ This script collects your current computers group structure from Deep Security a
 
 ### 2. Deployment
 
-- Clone this repository to the machine that you will use or download the [```group_mover.sh```](https://raw.githubusercontent.com/trendmicro/solutions-architect/main/Workload-Security/Migration/bash-group-mover/group_mover.sh?token=GHSAT0AAAAAABUROECUUN5MEEZP32B2S2VQYUFB6PA)
+- Clone this repository to the machine that you will use or download the [```group_mover.sh```](https://raw.githubusercontent.com/trendmicro/cloudone-community/main/Workload-Security/Migration/bash-group-mover/group_mover.sh?token=GHSAT0AAAAAABUROECUUN5MEEZP32B2S2VQYUFB6PA)
 - Edit the file to set environment variables so the script will be able to execute API calls. These are the variables that you should set in the script:
 
 ```bash
@@ -87,11 +87,11 @@ No more groups to be added :)
 
 ## Contributing
 
-If you encounter a bug or think of a useful feature or find something confusing in the docs, please [Create a New Issue](https://github.com/trendmicro/solutions-architect/issues/new)!
+If you encounter a bug or think of a useful feature or find something confusing in the docs, please [Create a New Issue](https://github.com/trendmicro/cloudone-community/issues/new)!
 
 We :heart: pull requests. If you'd like to fix a bug or contribute to a feature or just correct a typo, please feel free to do so.
 
-If you're thinking of adding a new feature, consider opening an [issue](https://github.com/trendmicro/solutions-architect/issues/new) first to discuss the feature to ensure it aligns with the direction of the project (and potentially
+If you're thinking of adding a new feature, consider opening an [issue](https://github.com/trendmicro/cloudone-community/issues/new) first to discuss the feature to ensure it aligns with the direction of the project (and potentially
 save yourself some time).
 
 ## Support

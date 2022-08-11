@@ -20,12 +20,12 @@ This script will deploy File Storage Security Stack to all buckets unless define
  - Clone this repository
  - After cloning repo:
  ```
-   cd .\solutions-architect\File-Storage-Security\deployment\python-deploy-to-all-existing-s3\
+   cd .\cloudone-community\File-Storage-Security\deployment\python-deploy-to-all-existing-s3\
 ```
 
 **2. Create the Exclusions text file**
    * Create a new file called `exclude.txt` with names of S3 buckets to exclude from FSS deployment.
-   - 1 per line, Example: [exclude.txt](https://github.com/trendmicro/solutions-architect/blob/main/File-Storage-Security/Deployment/python-deploy-to-all-existing/exclude.txt)
+   - 1 per line, Example: [exclude.txt](https://github.com/trendmicro/cloudone-community/blob/main/File-Storage-Security/Deployment/python-deploy-to-all-existing/exclude.txt)
    * For organizations with a large number of buckets, a list of S3 buckets can be piped into exclude.txt using the aws cli and PowerShell:
    ```
     aws s3 ls | Out-File -FilePath C:\<FILEPATH>\exclude.txt ; C:\<FILEPATH-AGAIN>\exclude.txt
