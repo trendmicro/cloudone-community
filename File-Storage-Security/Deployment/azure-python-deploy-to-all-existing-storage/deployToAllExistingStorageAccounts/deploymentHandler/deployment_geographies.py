@@ -37,8 +37,6 @@ def deploy_geographically(subscription_id, azure_supported_locations_obj_by_geog
             for scanner_stack  in existing_scanner_stacks_by_location[existing_scanner_stack_by_location]:
                 scanner_stack_names_list.append(scanner_stack["name"])
 
-    print(str(scanner_stack_names_list))
-
     # Remove any scanner stacks that violate the 50:1 Storage to Scanner stack ratio in this run
     max_storage_to_scanner_count = utils.get_config_from_file('cloudone.max_storage_stack_per_scanner_stack') - len(azure_storage_account_list)
     scanner_stacks_map_by_geographies_dict = utils.remove_scanner_stacks_exceed_max_storage_account_count(scanner_stacks_map_by_geographies_dict, max_storage_to_scanner_count)
@@ -81,11 +79,11 @@ def deploy_geographically(subscription_id, azure_supported_locations_obj_by_geog
 
                                 # storage_stack_deployment_outputs = 
                                 deployments.deploy_fss_storage_stack(
-                                    subscription_id, 
-                                    storage_account, 
-                                    cloudone_scanner_stack_id, 
-                                    scanner_stack_identity_principal_id, 
-                                    scanner_stack_queue_namespace
+                                    subscription_id = subscription_id, 
+                                    storage_account = storage_account, 
+                                    cloudone_scanner_stack_id = cloudone_scanner_stack_id, 
+                                    scanner_identity_principal_id = scanner_stack_identity_principal_id, 
+                                    scanner_queue_namespace = scanner_stack_queue_namespace
                                 )
 
                                 # if storage_stack_deployment_outputs:
@@ -113,11 +111,13 @@ def deploy_geographically(subscription_id, azure_supported_locations_obj_by_geog
                         scanner_stack_name = "fss-scanner-" + storage_account_geography + "-" + utils.trim_location_name(azure_recommended_location) + "-geo-autodeploy"
                         print("Deploying a Scanner Stack " + scanner_stack_name + " in " + str(azure_recommended_location) + "...")
                         scanner_stack_deployment_outputs = deployments.deploy_fss_scanner_stack(
-                            subscription_id, 
-                            azure_supported_locations_obj_by_geography_groups_dict, 
-                            azure_recommended_location, 
-                            fss_supported_regions_list, 
-                            scanner_stack_name
+                            subscription_id = subscription_id, 
+                            azure_supported_locations_obj_by_geography_groups_dict = azure_supported_locations_obj_by_geography_groups_dict, 
+                            azure_location = azure_recommended_location, 
+                            fss_supported_regions_list = fss_supported_regions_list, 
+                            scanner_stack_names_list = scanner_stack_names_list,
+                            azure_storage_account_name = None,
+                            scanner_stack_name = scanner_stack_name
                         )
 
                         if scanner_stack_deployment_outputs:
@@ -164,11 +164,11 @@ def deploy_geographically(subscription_id, azure_supported_locations_obj_by_geog
 
                                 # storage_stack_deployment_outputs = 
                                 deployments.deploy_fss_storage_stack(
-                                    subscription_id, 
-                                    storage_account, 
-                                    cloudone_scanner_stack_id, 
-                                    scanner_stack_identity_principal_id, 
-                                    scanner_stack_queue_namespace
+                                    subscription_id = subscription_id, 
+                                    storage_account = storage_account, 
+                                    cloudone_scanner_stack_id = cloudone_scanner_stack_id, 
+                                    scanner_identity_principal_id = scanner_stack_identity_principal_id, 
+                                    scanner_queue_namespace = scanner_stack_queue_namespace
                                 )
 
                                 # if storage_stack_deployment_outputs:

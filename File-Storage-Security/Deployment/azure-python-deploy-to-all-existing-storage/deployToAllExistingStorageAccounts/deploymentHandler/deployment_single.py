@@ -26,7 +26,12 @@ def deploy_single(subscription_id, azure_supported_locations_obj_by_geography_gr
     if not len(scanner_stacks_list["stacks"]):
 
         # Deploy One Scanner Stack
-        scanner_stack_deployment_outputs = deployments.deploy_fss_scanner_stack(subscription_id,  azure_supported_locations_obj_by_geography_groups_dict,  azure_location=utils.get_dict_key(temp_storage_account_dict, max_storage_account_count), fss_supported_regions_list=fss_supported_regions_list)
+        scanner_stack_deployment_outputs = deployments.deploy_fss_scanner_stack(
+            subscription_id = subscription_id,
+            azure_supported_locations_obj_by_geography_groups_dict = azure_supported_locations_obj_by_geography_groups_dict,
+            azure_location = utils.get_dict_key(temp_storage_account_dict, max_storage_account_count),
+            fss_supported_regions_list = fss_supported_regions_list
+        )
         
         if scanner_stack_deployment_outputs:            
 
@@ -48,4 +53,10 @@ def deploy_single(subscription_id, azure_supported_locations_obj_by_geography_gr
 
         for storage_account in azure_storage_account_list:        
 
-            deployments.deploy_fss_storage_stack(subscription_id, storage_account, cloudone_scanner_stack_id, scanner_stack_identity_principal_id, scanner_stack_queue_namespace)
+            deployments.deploy_fss_storage_stack(
+                subscription_id = subscription_id,
+                storage_account = storage_account,
+                cloudone_scanner_stack_id = cloudone_scanner_stack_id,
+                scanner_stack_identity_principal_id = scanner_stack_identity_principal_id,
+                scanner_stack_queue_namespace = scanner_stack_queue_namespace
+            )
