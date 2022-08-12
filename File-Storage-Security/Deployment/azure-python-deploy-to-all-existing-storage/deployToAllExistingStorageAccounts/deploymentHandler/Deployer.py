@@ -14,7 +14,6 @@ from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.resource.resources.models import DeploymentMode
 from azure.mgmt.resource.resources.models import Deployment
 from azure.mgmt.resource.resources.models import DeploymentProperties
-import datetime
 
 import utils
 
@@ -36,11 +35,6 @@ class Deployer(object):
         # TODO: Store credentials in the Azure Key Vault, instead of environment variables
         # print("\nClient ID : " + str(keyvault.get_secret_from_keyvault('FSS-AUTODEPLOY-CLIENT-ID')) + "\nClient Secret : " +  str(keyvault.get_secret_from_keyvault('FSS-AUTODEPLOY-CLIENT-SECRET')))
 
-        # self.credentials = ServicePrincipalCredentials(
-        #     client_id=os.environ['AZURE_CLIENT_ID'],
-        #     secret=os.environ['AZURE_CLIENT_SECRET'],
-        #     tenant=os.environ['AZURE_TENANT_ID']
-        # )
         self.credentials = ClientSecretCredential(
             client_id=os.environ['AZURE_CLIENT_ID'],
             client_secret=os.environ['AZURE_CLIENT_SECRET'],

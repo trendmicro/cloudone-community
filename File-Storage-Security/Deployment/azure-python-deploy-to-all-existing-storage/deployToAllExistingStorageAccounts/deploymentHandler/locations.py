@@ -50,12 +50,6 @@ def get_azure_location_detail(azure_location_name):
 # get_azure_supported_locations_sdk - Lists all supported locations for Azure in the current subscription via Azure SDK.
 def get_azure_supported_locations_sdk():
 
-    # credentials =  ServicePrincipalCredentials(
-    #     client_id=os.environ['AZURE_CLIENT_ID'],
-    #     secret=os.environ['AZURE_CLIENT_SECRET'],
-    #     tenant=os.environ['AZURE_TENANT_ID']
-    # )
-
     credentials =  ClientSecretCredential(
         client_id=os.environ['AZURE_CLIENT_ID'],
         client_secret=os.environ['AZURE_CLIENT_SECRET'],

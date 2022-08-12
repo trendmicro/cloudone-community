@@ -6,8 +6,11 @@ import logging
 from azure.cli.core import get_default_cli
 from azure.identity import ClientSecretCredential
 from azure.mgmt.resource import ResourceManagementClient
-from azure.mgmt.storage import StorageManagementClient
-from azure.mgmt.storage.models import StorageAccountUpdateParameters
+
+# TODO: Implement tagging deployment_model types and associated stack names onto the scanner and storage accounts/stacks
+# from azure.mgmt.storage import StorageManagementClient
+# from azure.mgmt.storage.models import StorageAccountUpdateParameters
+
 from glom import glom
 
 import cloudone_fss_api
@@ -57,9 +60,6 @@ def get_deployment_model_from_env(model_key, DEPLOYMENT_MODELS, DEFAULT_DEPLOYME
     logging.error("Missing Deployment Model selection. Check \"" + model_key + "\" env. variable or \"deployment_model\" in the config.json file.")
     raise Exception("Missing Deployment Model selection. Check \"" + model_key + "\" env. variable or \"deployment_model\" in the config.json file.")
 
-# def get_blob_account_url(file_url):
-#     return '/'.join(file_url.split('/')[0:3])
-
 def azure_cli_run_command(command):
     args = command.split()
     temp = tempfile.TemporaryFile(mode="w") 
@@ -108,13 +108,6 @@ def apply_exclusions(filename, azure_storage_account_list):
 
         return azure_storage_account_list
 
-# # Convert all Dict keys into a list for set-issubset checks
-# def get_all_keys(dict):
-#     for key, value in dict.items():
-#         yield key
-#         if isinstance(value, dict):
-#             yield from get_all_keys(value)
-
 def get_config_from_file(config_key):
     try:
         with open('config.json', 'r+') as f:
@@ -138,35 +131,6 @@ def get_config_from_file(config_key):
     except:
         logging.error("ConfigError. Check environment variable \"" + env_key + "\" or \"" + config_key + "\" in the config.json file.")
         raise Exception("ConfigError. Check environment variable \"" + env_key + "\" or \"" + config_key + "\" in the config.json file.")
-
-# def get_cloudone_region():
-#     cloudone_config = get_config_from_file('cloudone')
-#     if cloudone_config and "region" in cloudone_config.keys():
-#         if cloudone_config['region']:
-#             return str(cloudone_config['region'])
-#     if 'CLOUDONE_REGION' in os.environ.keys():
-#         return os.environ.get('CLOUDONE_REGION')
-#     logging.error("Missing Cloud One Region. Check \"CLOUDONE_REGION\" env. variable or \"cloudone.region\" in the config.json file.")
-#     raise Exception("Missing Cloud One Region. Check \"CLOUDONE_REGION\" env. variable or \"cloudone.region\" in the config.json file.")
-    
-# def get_cloudone_api_key():
-#     cloudone_config = get_config_from_file('cloudone')
-#     if cloudone_config and "api_key" in cloudone_config.keys():
-#         if cloudone_config['api_key']:
-#             return str(cloudone_config['api_key'])
-#     if 'CLOUDONE_API_KEY' in os.environ.keys():
-#         return os.environ.get('CLOUDONE_API_KEY')
-#     logging.error("Missing Cloud One API Key. Check \"CLOUDONE_API_KEY\" env. variable or \"cloudone.api_key\" in the config.json file.")
-#     raise Exception("Missing Cloud One API Key. Check \"CLOUDONE_API_KEY\" env. variable or \"cloudone.api_key\" in the config.json file.")
-
-# def get_cloudone_max_storage_to_scanner_count():
-#     cloudone_config = get_config_from_file('cloudone')
-#     if cloudone_config and "max_storage_stack_per_scanner_stack" in cloudone_config.keys():
-#         if cloudone_config['max_storage_stack_per_scanner_stack']:
-#             return str(cloudone_config['max_storage_stack_per_scanner_stack'])
-#     if 'MAX_STORAGE_STACK_PER_SCANNER_STACK' in os.environ.keys():
-#         return os.environ.get('MAX_STORAGE_STACK_PER_SCANNER_STACK')
-#     return 50 # Recommended value for the number of Storage Stack(s) per Scanner Stack
 
 def get_subscription_id():
     azure_subscription_id = str(get_config_from_file('subscription_id'))
