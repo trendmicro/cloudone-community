@@ -26,7 +26,6 @@ def get_scanner_stacks():
         region = utils.get_config_from_file('cloudone.region')
         api_key = utils.get_config_from_file('cloudone.api_key')
         
-        
         if region and api_key:
             cloudone_fss_api_url = "https://filestorage.{}.cloudone.trendmicro.com/api".format(region)
 
@@ -41,7 +40,10 @@ def get_scanner_stacks():
             )
 
             if r.status == 200:
-                return json.loads(r.data)
+                scanner_stacks_dict = json.loads(r.data)
+                for scanner_stack in scanner_stacks_dict["stacks"]:
+                    scanner_stack.update({"storageStackCount": len(get_associated_storage_stacks_to_scanner_stack(scanner_stack["stackID"])["stacks"])})
+                return scanner_stacks_dict
             else:                
                 logging.error("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")
                 raise Exception("HTTP Request failure (code: " + str(r.status) + ". Message: " + str(responses[r.status]) + "). Check cloudone section in the config.json file or environment variables [\"CLOUDONE_API_KEY\", \"CLOUDONE_REGION\"] for valid input.")

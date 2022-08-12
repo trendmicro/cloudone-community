@@ -224,11 +224,7 @@ def remove_scanner_stacks_exceed_max_storage_account_count(scanner_stacks_map_by
 
         for scanner_stack in scanner_stacks_map_by_geographies_dict[scanner_stack_geography]:
 
-            storage_account_count = len(cloudone_fss_api.get_associated_storage_stacks_to_scanner_stack(scanner_stack["stackID"])["stacks"])
-            # Update storageStackCount value to the scanner_stack
-            scanner_stack.update({"storageStackCount": storage_account_count})
-
-            if storage_account_count > max_storage_to_scanner_count:                
+            if scanner_stack["storageStackCount"] > max_storage_to_scanner_count:                
                 remove_scanner_stack_list.append(scanner_stack["stackID"])            
     
     for stack_id in remove_scanner_stack_list:
