@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Export type="SecurityProfile" date="October 31, 2018 13:32" version="11.3.102">
+	<SecurityProfiles>
+		<SecurityProfile id="9321">
+			<TBUID></TBUID>
+			<Name>S3 Scan</Name>
+			<Description></Description>
+			<ScheduleID isNull="true"/>
+			<MultipleInterfaceTypes>false</MultipleInterfaceTypes>
+			<CountersReset isNull="true"/>
+			<DetectionEngineState>-1</DetectionEngineState>
+			<OnAssignCustomAction></OnAssignCustomAction>
+			<OnUnassignCustomAction></OnUnassignCustomAction>
+			<AutoRequiresUpdate>-1</AutoRequiresUpdate>
+			<ParentSecurityProfileID isNull="true"/>
+			<AntiMalwareSecurityProfile id="9321">
+				<SecurityProfileID>9321</SecurityProfileID>
+				<AntiMalwareState>0</AntiMalwareState>
+			</AntiMalwareSecurityProfile>
+			<NetworkSecurityProfile id="9321">
+				<SecurityProfileID>9321</SecurityProfileID>
+				<StatefulFilterID isNull="true"/>
+				<NetworkControlState>-1</NetworkControlState>
+				<VulnerabilityShieldState>-1</VulnerabilityShieldState>
+			</NetworkSecurityProfile>
+			<IntegritySecurityProfile id="9521">
+				<SecurityProfileID>9321</SecurityProfileID>
+				<SystemIntegrityState>-1</SystemIntegrityState>
+			</IntegritySecurityProfile>
+			<LogInspectionSecurityProfile id="9321">
+				<SecurityProfileID>9321</SecurityProfileID>
+				<LogInspectionState>-1</LogInspectionState>
+			</LogInspectionSecurityProfile>
+			<AppControlSecurityProfile id="6401">
+				<SecurityProfileID>9321</SecurityProfileID>
+				<AppControlState>-1</AppControlState>
+				<RulesetID isNull="true"/>
+				<Lockdown isNull="true"/>
+				<WhitelistMode isNull="true"/>
+			</AppControlSecurityProfile>
+		</SecurityProfile>
+	</SecurityProfiles>
+	<IPLists/>
+	<PortLists/>
+	<Schedules>
+		<Schedule id="4">
+			<TBUID>181731C1-C237-F5F4-8C1C-229CCD4F5F2E</TBUID>
+			<Name>Every Day All Day</Name>
+			<Description></Description>
+			<HourOfWeek>111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111</HourOfWeek>
+		</Schedule>
+	</Schedules>
+	<ScanCachePolicyObjects/>
+	<ScanDirectoryLists>
+		<ScanDirectoryList id="601">
+			<TBUID></TBUID>
+			<Name>S3 Scan Only</Name>
+			<Description></Description>
+			<Items>/scan/&lt;:&gt;</Items>
+			<Version></Version>
+			<UserEdited>true</UserEdited>
+		</ScanDirectoryList>
+	</ScanDirectoryLists>
+	<ScanFileLists/>
+	<ScanFileExtLists/>
+	<AntiMalwares>
+		<AntiMalware id="1821">
+			<Name>S3 Scan Configuration</Name>
+			<Description></Description>
+			<FilesToScan>1</FilesToScan>
+			<ScanFileExtID isNull="true"/>
+			<ScanFilesActivitiy>3</ScanFilesActivitiy>
+			<ScanCompressed>false</ScanCompressed>
+			<ScanCompressedSmaller>2</ScanCompressedSmaller>
+			<ScanCompressedLayer>2</ScanCompressedLayer>
+			<ExcludedScanDirList isNull="true"/>
+			<ExcludedScanFileList isNull="true"/>
+			<ExcludedScanFileExtList isNull="true"/>
+			<ScanAction>1</ScanAction>
+			<ScanCustomAction1 isNull="true"/>
+			<ScanCustomAction2 isNull="true"/>
+			<Alert>false</Alert>
+			<FoldersToScan>2</FoldersToScan>
+			<ScanDirList>601</ScanDirList>
+			<TBUID></TBUID>
+			<UnScannableFileAction isNull="true"/>
+			<IntelliTrapeEnabled>false</IntelliTrapeEnabled>
+			<SpywareEnabled>true</SpywareEnabled>
+			<ScanCustomActionForGeneric>0</ScanCustomActionForGeneric>
+			<ConfigurationType>1</ConfigurationType>
+			<ScanNetworkFolder>false</ScanNetworkFolder>
+			<CpuUsage isNull="true"/>
+			<ScanOLE>true</ScanOLE>
+			<ScanOLEExploit>true</ScanOLEExploit>
+			<ScanOLELayer>3</ScanOLELayer>
+			<ScanActionForVirus isNull="true"/>
+			<ScanActionForTrojans isNull="true"/>
+			<ScanActionForPacker isNull="true"/>
+			<ScanActionForSpyware isNull="true"/>
+			<ScanActionForOtherThreats isNull="true"/>
+			<ScanActionForCookie isNull="true"/>
+			<ExcludedScanProcessFileList isNull="true"/>
+			<ScanCompressedNumberOfFiles>10</ScanCompressedNumberOfFiles>
+			<ATSEDetectionEnabled>true</ATSEDetectionEnabled>
+			<ATSEDetectionLevel>1</ATSEDetectionLevel>
+			<ScanActionForAtseLevel1 isNull="true"/>
+			<ScanActionForAtseLevel2 isNull="true"/>
+			<ScanActionForAtseLevel3 isNull="true"/>
+			<ScanActionForAtseLevel4 isNull="true"/>
+			<CorrelativeScan>false</CorrelativeScan>
+			<SuspiciousActivityDetection>false</SuspiciousActivityDetection>
+			<RansomwareDetection>false</RansomwareDetection>
+			<DocumentRecovery>false</DocumentRecovery>
+			<RealtimeMemoryScan>false</RealtimeMemoryScan>
+			<AntiExploit>false</AntiExploit>
+			<ATSEDetectionOption>0</ATSEDetectionOption>
+			<ScanActionOption>0</ScanActionOption>
+			<TrendxScanEnabled>false</TrendxScanEnabled>
+			<ScanActionForTrendX isNull="true"/>
+		</AntiMalware>
+	</AntiMalwares>
+	<SecurityProfileAntiMalwares>
+		<SecurityProfileAntiMalware isBridge="true" id="7101">
+			<TBUID></TBUID>
+			<SecurityProfileID>9321</SecurityProfileID>
+			<RealTime1_AntiMalwareID>1821</RealTime1_AntiMalwareID>
+			<RealTime2_AntiMalwareID isNull="true"/>
+			<RealTime3_AntiMalwareID isNull="true"/>
+			<RealTime4_AntiMalwareID isNull="true"/>
+			<RealTime5_AntiMalwareID isNull="true"/>
+			<Manual_AntiMalwareID isNull="true"/>
+			<Scheduled_AntiMalwareID isNull="true"/>
+			<RealTime1_ScheduleID>4</RealTime1_ScheduleID>
+			<RealTime2_ScheduleID isNull="true"/>
+			<RealTime3_ScheduleID isNull="true"/>
+			<RealTime4_ScheduleID isNull="true"/>
+			<RealTime5_ScheduleID isNull="true"/>
+			<RealTimeEnableOveride>true</RealTimeEnableOveride>
+			<ManualEnableOveride>false</ManualEnableOveride>
+			<ScheduledEnableOveride>false</ScheduledEnableOveride>
+		</SecurityProfileAntiMalware>
+	</SecurityProfileAntiMalwares>
+	<MACLists/>
+	<RuleContexts/>
+	<PacketFilters/>
+	<PacketFilterOverrides/>
+	<StatefulFilters/>
+	<PayloadFilter2s/>
+	<PayloadFilter2Overrides/>
+	<PayloadFilter2Metadatas/>
+	<PayloadFilter2MetadataOverrides/>
+	<ConnectionTypes/>
+	<ConnectionTypeOverrides/>
+	<ConnectionTypeMetadatas/>
+	<ConnectionTypeMetadataOverrides/>
+	<SecurityProfilePacketFilters/>
+	<SecurityProfilePacketFilterInterfaceTypes/>
+	<SecurityProfileStatefulFilters/>
+	<SecurityProfilePayloadFilter2s/>
+	<SecurityProfilePayloadFilter2InterfaceTypes/>
+	<SecurityProfileConnectionTypes/>
+	<SecurityProfileConnectionTypeInterfaceTypes/>
+	<InterfaceTypes/>
+	<IntegrityRules/>
+	<IntegrityRuleOverrides/>
+	<IntegrityRuleMetadatas/>
+	<IntegrityRuleMetadataOverrides/>
+	<SecurityProfileIntegrityRules/>
+	<LogInspectionRules/>
+	<LogInspectionRuleOverrides/>
+	<LogInspectionRuleMetadatas/>
+	<LogInspectionRuleMetadataOverrides/>
+	<SecurityProfileLogInspectionRules/>
+	<AdvancedSettings>
+		<SecurityProfileSettings id="9321">
+			<Setting name="com.trendmicro.ds.antimalware:settings.configuration.antiMalwareState" value="0"/>
+		</SecurityProfileSettings>
+	</AdvancedSettings>
+</Export>
