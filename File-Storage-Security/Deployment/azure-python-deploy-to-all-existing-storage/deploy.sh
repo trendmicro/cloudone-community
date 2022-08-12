@@ -3,7 +3,7 @@
 # Function app and storage account names must be unique.
 
 # Variable block
-((randomIdentifier=$RANDOM*$RANDOM))
+((randomIdentifier=RANDOM*RANDOM))
 location="eastus"
 resourceGroup="azure-functions-deployfss-rg-$randomIdentifier"
 tag="function-app-deployfss"
