@@ -18,28 +18,20 @@ def compose_tags(existing_tags, new_tags):
     existing_tags.update(new_tags)
     return existing_tags
 
-# tag_resource: Adds the FSSMonitored tag to the Storage Account(s) that are monitored by Trend Micro File Storage Security
-def tag_resource(subscription_id, resource_group_name, storage_account_name, resource_type, tags_dict):
-    if resource_type == "storage_account":
-        credentials = ClientSecretCredential(
-            client_id=os.environ['AZURE_CLIENT_ID'],
-            client_secret=os.environ['AZURE_CLIENT_SECRET'],
-            tenant_id=os.environ['AZURE_TENANT_ID']       
-        )
-        client = StorageManagementClient(credentials, subscription_id)
-        storage_account_tags = client.storage_accounts.get_properties( 
-            resource_group_name = resource_group_name,
-            account_name = storage_account_name
-        )
-        tags_dict = compose_tags(storage_account_tags.tags, tags_dict)
-        # print("\n\ntags_dict - " + str(tags_dict))
-        return client.storage_accounts.update(
-            resource_group_name = resource_group_name,
-            account_name = storage_account_name,
-            parameters = StorageAccountUpdateParameters(
-                tags = tags_dict
-            )
-        )
+# tag_resource_in_template: Introduce tags into the ARM template (JSON) before deployment
+def tag_resource_in_template(template_dict, deployment_tags_dict={}):
+
+    taggable_resource_type_list = ["microsoft.storage/storageaccounts", "microsoft.servicebus/namespaces", "microsoft.keyvault/vaults", "microsoft.logic/workflows", "microsoft.resources/deploymentscripts", "microsoft.web/serverfarms", "microsoft.web/sites", "microsoft.insights/components"]
+
+    for resource in template_dict["resources"]:
+        tags_dict = {}
+        tags_dict.update(deployment_tags_dict)
+        if "tags" in resource:
+            tags_dict.update(resource["tags"])
+        if resource["type"].lower() in taggable_resource_type_list:
+            resource.update({"tags": tags_dict})
+
+    return template_dict
 
 # get_deployment_mode_from_env: Gets the deployment mode this script is executed with
 def get_deployment_mode_from_env(mode_key, DEPLOYMENT_MODES, DEFAULT_DEPLOYMENT_MODE):

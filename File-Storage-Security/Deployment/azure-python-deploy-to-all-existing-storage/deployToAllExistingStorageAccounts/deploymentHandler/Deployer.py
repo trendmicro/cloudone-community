@@ -69,7 +69,13 @@ class Deployer(object):
 
         template_path = os.path.join(os.path.dirname(__file__), 'templates', template_file_name)
         with open(template_path, 'r') as template_file_fd:
-            template = json.load(template_file_fd)        
+            template = json.load(template_file_fd)
+
+        tags_dict = utils.get_deployment_tags()
+        utils.tag_resource_in_template(
+            template_dict = template,
+            deployment_tags_dict = tags_dict
+        ) 
 
         parameters = {}
         if stack_params:
@@ -106,23 +112,6 @@ class Deployer(object):
             resource_group_name = self.resource_group_name,
             deployment_name = self.resource_group_name + '-dep'
         )
-
-        # TODO: Tag them
-        # print("Resource Group List - " + str(utils.list_resources_in_resource_group(self.subscription_id, self.resource_group_name)))
-
-        # for resource in utils.list_resources_in_resource_group(self.subscription_id, self.resource_group_name):
-        #     print(str(resource))
-        
-        #  Tag the Storage Account as FSS_MONITORED_TAG = 'FSSMonitored'
-        if stack_type == "storage":
-
-            tags = {FSS_MONITORED_TAG: True, FSS_MONITORED_TAG + "Date": datetime.datetime.now().isoformat()}
-            tags.update(utils.get_deployment_tags())
-
-            storage_account_resource_group_name = utils.get_resource_group_name_from_resource_id(deployment_outputs.properties.outputs["blobStorageAccountResourceID"]["value"])
-            storage_account_name = utils.get_resource_name_from_resource_id(deployment_outputs.properties.outputs["blobStorageAccountResourceID"]["value"])
-
-            utils.tag_resource(self.subscription_id, storage_account_resource_group_name, storage_account_name, resource_type="storage_account", tags_dict=tags)
 
         return deployment_outputs.properties.outputs 
 
