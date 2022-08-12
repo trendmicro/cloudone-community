@@ -38,8 +38,8 @@ def deploy_one_to_one(subscription_id, azure_supported_locations_obj_by_geograph
                 subscription_id = subscription_id, 
                 storage_account = storage_account, 
                 cloudone_scanner_stack_id = cloudone_scanner_stack_id, 
-                scanner_stack_identity_principal_id = scanner_stack_identity_principal_id, 
-                scanner_stack_queue_namespace = scanner_stack_queue_namespace
+                scanner_identity_principal_id = scanner_stack_identity_principal_id, 
+                scanner_queue_namespace = scanner_stack_queue_namespace
             )
 
             # if storage_stack_deployment_outputs:
