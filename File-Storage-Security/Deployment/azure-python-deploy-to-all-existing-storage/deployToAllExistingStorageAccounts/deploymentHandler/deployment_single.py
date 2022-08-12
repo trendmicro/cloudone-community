@@ -22,6 +22,8 @@ def deploy_single(subscription_id, azure_supported_locations_obj_by_geography_gr
 
     cloudone_scanner_stack_id = scanner_stack_identity_principal_id = scanner_stack_queue_namespace = None
 
+    # TODO: Filter with single deployment model scanner stacks
+
     # If no Scanner Stack(s) exist in this Azure subscription
     if not len(scanner_stacks_list["stacks"]):
 
@@ -43,11 +45,12 @@ def deploy_single(subscription_id, azure_supported_locations_obj_by_geography_gr
             logging.error("Deployment Failed. The deployment did not create any output(s). Check deployment status for more details on how to troubleshoot this issue.")
             raise Exception("Deployment Failed. The deployment did not create any output(s). Check deployment status for more details on how to troubleshoot this issue.")
 
-    else:        
-        # TODO: Choose the Scanner Stack in this subscription with the lowest number of storage stacks
-        cloudone_scanner_stack_id = scanner_stacks_list["stacks"][0]["stackID"]
-        scanner_stack_identity_principal_id = scanner_stacks_list["stacks"][0]["details"]["scannerIdentityPrincipalID"]
-        scanner_stack_queue_namespace = scanner_stacks_list["stacks"][0]["details"]["scannerQueueNamespace"]
+    else:
+        scanner_stack_min_storage_stack_count = min(scanner_stacks_list["stacks"], key=lambda x: x["storageStackCount"])
+
+        cloudone_scanner_stack_id = scanner_stack_min_storage_stack_count["stackID"]
+        scanner_stack_identity_principal_id = scanner_stack_min_storage_stack_count["details"]["scannerIdentityPrincipalID"]
+        scanner_stack_queue_namespace = scanner_stack_min_storage_stack_count["details"]["scannerQueueNamespace"]
 
     if cloudone_scanner_stack_id and scanner_stack_identity_principal_id and scanner_stack_queue_namespace:
 
@@ -57,6 +60,6 @@ def deploy_single(subscription_id, azure_supported_locations_obj_by_geography_gr
                 subscription_id = subscription_id,
                 storage_account = storage_account,
                 cloudone_scanner_stack_id = cloudone_scanner_stack_id,
-                scanner_stack_identity_principal_id = scanner_stack_identity_principal_id,
-                scanner_stack_queue_namespace = scanner_stack_queue_namespace
+                scanner_identity_principal_id = scanner_stack_identity_principal_id,
+                scanner_queue_namespace = scanner_stack_queue_namespace
             )
