@@ -239,6 +239,17 @@ def remove_scanner_stacks_exceed_max_storage_account_count(scanner_stacks_map_by
 
     return scanner_stacks_map_by_geographies_dict
 
+def filter_scanner_stacks_by_deployment_model(scanner_stacks_list, deployment_model_type):
+
+    temp_list = []
+    for scanner_stack in scanner_stacks_list["stacks"]:
+        if deployment_model_type not in scanner_stack["name"].split("-"):
+            temp_list.append(scanner_stack)
+
+    for scanner_stack in temp_list:
+        scanner_stacks_list["stacks"].remove(scanner_stack)        
+    return scanner_stacks_list
+
 # function to return dict key for any value
 def get_dict_key(value_dict, val):
     if value_dict:

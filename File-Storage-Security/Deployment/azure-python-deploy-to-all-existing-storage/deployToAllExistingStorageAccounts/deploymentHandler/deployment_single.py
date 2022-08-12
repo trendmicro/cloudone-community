@@ -9,6 +9,10 @@ def deploy_single(subscription_id, azure_supported_locations_obj_by_geography_gr
     # Get All Scanner Stacks in this Azure Subscription
     scanner_stacks_list = cloudone_fss_api.filter_stacks_by_subscription_id(subscription_id, cloudone_fss_api.get_scanner_stacks()) 
 
+    # Filter with "single" deployment model type scanner stacks
+    if scanner_stacks_list["stacks"]:
+        scanner_stacks_list = utils.filter_scanner_stacks_by_deployment_model(scanner_stacks_list, "single")
+
     temp_storage_account_dict = {}
     for storage_account in azure_storage_account_list:
 
@@ -22,10 +26,8 @@ def deploy_single(subscription_id, azure_supported_locations_obj_by_geography_gr
 
     cloudone_scanner_stack_id = scanner_stack_identity_principal_id = scanner_stack_queue_namespace = None
 
-    # TODO: Filter with single deployment model scanner stacks
-
     # If no Scanner Stack(s) exist in this Azure subscription
-    if not len(scanner_stacks_list["stacks"]):
+    if not scanner_stacks_list["stacks"]:
 
         # Deploy One Scanner Stack
         scanner_stack_deployment_outputs = deployments.deploy_fss_scanner_stack(
