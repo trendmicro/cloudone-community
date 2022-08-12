@@ -32,7 +32,8 @@ def deploy_single(subscription_id, azure_supported_locations_obj_by_geography_gr
             subscription_id = subscription_id,
             azure_supported_locations_obj_by_geography_groups_dict = azure_supported_locations_obj_by_geography_groups_dict,
             azure_location = utils.get_dict_key(temp_storage_account_dict, max_storage_account_count),
-            fss_supported_regions_list = fss_supported_regions_list
+            fss_supported_regions_list = fss_supported_regions_list,
+            deployment_model = "single"
         )
         
         if scanner_stack_deployment_outputs:            

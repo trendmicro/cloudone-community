@@ -20,7 +20,6 @@ def deploy_geographically(subscription_id, azure_supported_locations_obj_by_geog
     # Inventory of existing FSS scanner stacks in this subscription by Azure location
     existing_scanner_stacks_by_location = cloudone_fss_api.map_scanner_stacks_to_azure_locations()    
 
-
     # If scanner stacks exist, add them to the Scanner Stack Map
     if existing_scanner_stacks_by_location:
 
@@ -108,16 +107,17 @@ def deploy_geographically(subscription_id, azure_supported_locations_obj_by_geog
                         azure_recommended_location = locations.get_azure_recommended_location_by_geography_group(storage_account_geography, azure_supported_locations_obj_by_geography_groups_dict, fss_supported_regions_list)
 
                         # Deploy One Scanner Stack
-                        scanner_stack_name = "fss-scanner-" + storage_account_geography + "-" + utils.trim_location_name(azure_recommended_location) + "-geo-autodeploy"
-                        print("Deploying a Scanner Stack " + scanner_stack_name + " in " + str(azure_recommended_location) + "...")
+                        scanner_stack_name_prefix = "fss-scanner-" + storage_account_geography + "-" + utils.trim_location_name(azure_recommended_location)
+                        print("Deploying a Scanner Stack " + scanner_stack_name_prefix + " in " + str(azure_recommended_location) + "...")
                         scanner_stack_deployment_outputs = deployments.deploy_fss_scanner_stack(
                             subscription_id = subscription_id, 
                             azure_supported_locations_obj_by_geography_groups_dict = azure_supported_locations_obj_by_geography_groups_dict, 
                             azure_location = azure_recommended_location, 
-                            fss_supported_regions_list = fss_supported_regions_list, 
+                            fss_supported_regions_list = fss_supported_regions_list,
+                            deployment_model = "geo", 
                             scanner_stack_names_list = scanner_stack_names_list,
                             azure_storage_account_name = None,
-                            scanner_stack_name = scanner_stack_name
+                            scanner_stack_name_prefix = scanner_stack_name_prefix
                         )
 
                         if scanner_stack_deployment_outputs:

@@ -17,7 +17,8 @@ def deploy_one_to_one(subscription_id, azure_supported_locations_obj_by_geograph
             fss_supported_regions_list = fss_supported_regions_list,
             scanner_stack_names_list = [],
             azure_storage_account_name = storage_account["name"],
-            scanner_stack_name = "fss-scanner-" + utils.trim_location_name(storage_account["location"]) + "-" + utils.trim_resource_name(storage_account["name"], 12, 12) + "-autodeploy"
+            scanner_stack_name_prefix = "fss-scanner-" + utils.trim_location_name(storage_account["location"]) + "-" + utils.trim_resource_name(storage_account["name"], 10, 10),
+            deployment_model = "oto"
         )
         
         if scanner_stack_deployment_outputs:            

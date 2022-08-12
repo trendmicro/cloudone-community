@@ -8,7 +8,7 @@ import cloudone_fss_api
 
 from Deployer import Deployer
 
-def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, azure_location, fss_supported_regions_list, scanner_stack_names_list=[], azure_storage_account_name=None, scanner_stack_name=None, resource_group_name=None, geography_group_name=None):
+def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_geography_groups_dict, azure_location, fss_supported_regions_list, deployment_model=None, scanner_stack_names_list=[], azure_storage_account_name=None, scanner_stack_name_prefix=None, resource_group_name=None, geography_group_name=None):
 
     # File Storage Security Scanner Stack deployment templates can be found at https://github.com/trendmicro/cloudone-filestorage-deployment-templates/blob/master/azure/FSS-Scanner-Stack-Template.json or in the ./templates directory
 
@@ -25,23 +25,32 @@ def deploy_fss_scanner_stack(subscription_id, azure_supported_locations_obj_by_g
             azure_location = locations.get_azure_recommended_location_by_geography_group(geography_group_name, azure_supported_locations_obj_by_geography_groups_dict, fss_supported_regions_list)
             logging.info("New Azure location: " + azure_location)
 
-            scanner_stack_name = "fss-scanner-" + utils.trim_location_name(azure_location) + "-" + utils.trim_resource_name(azure_storage_account_name, 12, 12) + "-autodeploy"
-
         if not geography_group_name:
             geography_group_name = geographies.get_geography_group_from_location(azure_location, azure_supported_locations_obj_by_geography_groups_dict)
 
         # Build a Scanner Stack name
-        if not scanner_stack_name:            
-            scanner_stack_name = "fss-scanner-" + geography_group_name + "-" + azure_location + "-geo-autodeploy"
+        if not scanner_stack_name_prefix:
+            if deployment_model in ["geo", "single"]:      
+                scanner_stack_name_prefix = "fss-scanner-" + geography_group_name + "-" + utils.trim_location_name(azure_location)
+            if deployment_model == "oto":
+                scanner_stack_name_prefix = "fss-scanner-" + utils.trim_location_name(azure_location) + "-" + utils.trim_resource_name(azure_storage_account_name, 10, 10)
+
+        # Adding the right deployment_model suffixes
+        if deployment_model:
+            scanner_stack_name_prefix += "-" + deployment_model
+
+        # Adding autodeploy branding to the stack name
+        scanner_stack_name = scanner_stack_name_prefix + "-autodeploy"
+
         if not resource_group_name:
             resource_group_name = scanner_stack_name + "-rg"
 
         # Check existing names and increment if name already exists
         if scanner_stack_name in scanner_stack_names_list:
 
-            scanner_stack_name_prefix = scanner_stack_name.split("geo") + "geo-"
-            match_list = [stack_name for stack_name in scanner_stack_names_list if scanner_stack_name_prefix in stack_name]
-            scanner_stack_name = scanner_stack_name_prefix + str(len(match_list) + 1) + "-autodeploy"
+            scanner_stack_name_search_prefix = scanner_stack_name.split(deployment_model)[0] + deployment_model + "-"
+            match_list = [stack_name for stack_name in scanner_stack_names_list if scanner_stack_name_search_prefix in stack_name]
+            scanner_stack_name = scanner_stack_name_search_prefix + str(len(match_list) + 1) + "-autodeploy"
             resource_group_name = scanner_stack_name + "-rg"
 
         logging.info("Initializing the Deployer class with subscription id: {}, resource group: {} ...".format(subscription_id, resource_group_name))
@@ -79,7 +88,7 @@ def deploy_fss_storage_stack(subscription_id, storage_account, cloudone_scanner_
     cloudone_region = utils.get_config_from_file('cloudone.region')
 
     if not storage_stack_name:
-        storage_stack_name = "fss-storage-" + utils.trim_location_name(storage_account["location"]) + "-" + utils.trim_resource_name(storage_account["name"], 12, 12) +  "-autodeploy"
+        storage_stack_name = "fss-storage-" + utils.trim_location_name(storage_account["location"]) + "-" + utils.trim_resource_name(storage_account["name"], 10, 10) +  "-autodeploy"
 
     if not resource_group_name:
         resource_group_name = storage_stack_name + "-rg"
