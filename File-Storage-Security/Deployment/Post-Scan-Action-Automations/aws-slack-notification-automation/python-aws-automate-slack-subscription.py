@@ -36,7 +36,7 @@ def fss_list_stack():
         stack_names.append(name['name'])
     describe_fss_storage(stack_names)
 
-
+# describe cft stacks to obtain each storage stack sns arn.
 def describe_fss_storage(stack_names):
     
     cft_client = boto3.client('cloudformation')
@@ -48,7 +48,6 @@ def describe_fss_storage(stack_names):
         for output in outputs:
             keyName = output["OutputKey"]
             if keyName == "ScanResultTopicARN":
-                # print(output["OutputValue"])
                 arnArray.append(output["OutputValue"])
     subscribe_sns(arnArray)    
 
