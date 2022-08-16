@@ -3,7 +3,12 @@ This script will subscribe a deployed Slack plugin to all FSS storage stacks. Af
 
 **Before you deploy**
 
+   * Install supporting tools
+        - Install the AWS command line interface (CLI). 
+        See [Installing the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html) for details.
+
    * If not already present, [deploy the Slack Plugin for File Storage Security](https://github.com/trendmicro/cloudone-filestorage-plugins/tree/master/post-scan-actions/aws-python-slack-notification).
+  
   * Obtain the following parameters.
       - API Key - Generate a [Cloud One API Key](https://cloudone.trendmicro.com/docs/account-and-user-management/c1-api-key/)
       - Cloud One Account Region - example: ```us-1```.
