@@ -14,19 +14,19 @@ This script will subscribe a deployed Slack plugin to all FSS storage stacks. Af
       - **Cloud One Account** [**Region**](https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-regions/) - example: ```us-1```.
       - **Name** of the Slack Lambda Function.
       - **ARN** of the Slack Lambda Function.
-
+      - **AWS Region** of the Slack Lambda Function.
 <hr>
 
 **1. Clone Repo**
  - Clone this repository
  - After cloning repo:
  ```
-   cd .\cloudone-community\File-Storage-Security\Post-Scan-Action-Automations\aws-slack-notification-automation
+   cd .\cloudone-community\File-Storage-Security\Deployment\Post-Scan-Action-Automations\aws-slack-notification-automation
 ```
 
 **2. Run Script**
    - Open terminal/cmd:
    ```
-      .\auto-slack.py --apikey <apikey here> --c1region <c1 account region> --functionname <name of slack function --functionarn <slack function arn> --awsprofile <> --awsregion <aws region to operate in>
+      .\auto-slack.py --apikey <apikey here> --c1region <c1 account region> --functionname <name of slack function --functionarn <slack function arn> --awsprofile <name of profile to use> --awsregion <aws region to operate in> --pluginregion <aws region where slack plugin resides>
    ```  
 
