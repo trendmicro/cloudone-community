@@ -1,0 +1,48 @@
+{
+  "name": "fss-full-scan",
+  "version": "v2.0.0",
+  "author": {
+    "name": "Raphael Bottino",
+    "email": "raphabot@gmail.com",
+    "url": "https://github.com/raphabot/"
+  },
+  "description": "FSS-Full-Scan is a CDK project to deploy all the required resources to trigger a full scan on a S3 bucket leveraging an existing Trend Micro File Storage Security deployment.",
+  "keywords": [
+    "FSS",
+    "Trend Micro",
+    "Cloud One",
+    "File Storage Security",
+    "AWS S3"
+  ],
+  "homepage": "https://github.com/raphabot/FSS-Full-Scan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/raphabot/FSS-Full-Scan.git"
+  },
+  "license": "MIT",
+  "bin": {
+    "fss-full-scan": "bin/fss-full-scan.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk",
+    "cloudformation": "npm run build && cdk synth --no-version-reporting --version-reporting false --path-metadata false --asset-metadata false > template.yaml"
+  },
+  "devDependencies": {
+    "@aws-cdk/assert": "2.38.1",
+    "@types/jest": "^28.1.7",
+    "@types/node": "18.7.11",
+    "aws-cdk": "2.38.1",
+    "jest": "^28.1.3",
+    "ts-jest": "^28.0.8",
+    "ts-node": "^10.9.1",
+    "typescript": "~4.7.4"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.38.1",
+    "constructs": "^10.1.84",
+    "source-map-support": "^0.5.21"
+  }
+}
