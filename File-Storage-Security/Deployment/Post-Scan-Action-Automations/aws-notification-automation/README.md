@@ -11,12 +11,14 @@ This script will subscribe a deployed Notification plugin like Slack to all depl
    
    * Configure [AWS Named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html). 
 
-   * If not already present, [deploy the Slack Plugin for File Storage Security](https://github.com/trendmicro/cloudone-filestorage-plugins/tree/master/post-scan-actions/aws-python-slack-notification). This will be needed in order to obtain the Lambda name and ARN.
+   * If not already present, [deploy a notification Plugin for File Storage Security](https://github.com/trendmicro/cloudone-filestorage-plugins/tree/master/post-scan-actions/). 
+      - This will be needed in order to obtain the Lambda Name and ARN values.
+      - Supported notification plugins are Slack, MS Teams and Jira.
   
   * Obtain the following parameters.
       - **API Key** - Generate a [Cloud One API Key](https://cloudone.trendmicro.com/docs/account-and-user-management/c1-api-key/)
       - **Cloud One Account** [**Region**](https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-regions/) - example: ```us-1```.
-      - **Name** of the norification Lambda Function.
+      - **Name** of the notification Lambda Function.
       - **ARN** of the notification Lambda Function.
       - **AWS Region** of the notification Lambda Function.
 <hr>
@@ -32,6 +34,6 @@ This script will subscribe a deployed Notification plugin like Slack to all depl
    - Open terminal/cmd:
    - Can optionally define AWS Profile to use with ```--awsprofile <name of profile to use>``` flag.
    ```
-      .\python-aws-automate-subscription.py --apikey <apikey here> --c1region <c1 account region> --functionname <name of slack function --functionarn <slack function arn> --awsregion <aws region to operate in> --pluginregion <aws region where slack plugin resides>
+      .\python-aws-automate-subscription.py --apikey <apikey here> --c1region <c1 account region> --functionname <name of notification function> --functionarn <notification function ARN value> --awsregion <aws region to where you are deploying to> --pluginregion <aws region where notification plugin resides>
    ```  
 
