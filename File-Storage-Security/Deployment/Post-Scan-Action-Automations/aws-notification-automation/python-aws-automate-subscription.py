@@ -1,3 +1,4 @@
+import profile
 import boto3
 import botocore
 import random
@@ -14,7 +15,7 @@ parser.add_argument("--apikey", required=True, type=str, help="Cloud One API Key
 parser.add_argument("--c1region", required=True, type=str, help="Cloud One Account Region")
 parser.add_argument("--functionname", required=True, type=str, help="Name of Slack Lambda Function")
 parser.add_argument("--functionarn", required=True, type=str, help="ARN of Slack Lambda Function")
-parser.add_argument("--awsprofile", required=True, type=str, help="AWS Profile to use for credentials")
+parser.add_argument("--awsprofile", required=False, default="default", type=str, help="AWS Profile to use for credentials")
 parser.add_argument("--pluginregion", required=True, type=str, help="AWS Region Slack plugin is deployed")
 args = parser.parse_args()
 
@@ -62,14 +63,15 @@ def describe_fss_storage(stacks_info):
                 if keyName == "ScanResultTopicARN":
                     topic_arn = output["OutputValue"]
                     subscribe_sns(topic_arn, session)
-        # Skip deploy FSS stacks that do not exist in current AWS account
+        # Skip deploy FSS stacks that do not exist in current AWS account or invalid permissions
         except botocore.exceptions.ClientError as err:
-            print("Skipping " + str(stack[0]) + ", does not exist in this AWS Account")
+            if err.response['Error']['Code'] == 'AccessDenied':
+                print("AWS Profile in use does not have sufficient permissions. Denied.")
+            else:
+                print("Skipping " + str(stack[0]) + ", does not exist in this AWS Account")
 
 # subscribe lambda to sns topics to receive events
 def subscribe_sns(topic_arn, session):
-
-    #for topic in arnArray:
     try:    
         client_lambda = session.client('lambda')
         client_lambda.add_permission(Action="lambda:InvokeFunction", StatementId=(''.join(random.choices(string.ascii_lowercase, k=5))),FunctionName=fx_name, Principal='sns.amazonaws.com', SourceArn=topic_arn)
