@@ -8,13 +8,11 @@
  variable "aws-account-id" {
    type = number
    description = "AWS Account ID"
-   default = "PLEASE_CHANGE_ME"
  }
 
  variable "externalid" {
    type = number
    description = "Cloud One External ID or Cloud One Account ID"
-   default = "PLEASE_CHANGE_ME"
  }
 
  variable "policy-prefix" {
