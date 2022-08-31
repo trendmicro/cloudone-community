@@ -3,7 +3,7 @@ import { App, TerraformStack, TerraformOutput, TerraformVariable } from "cdktf";
 import { AwsProvider, iam } from '@cdktf/provider-aws';
 import { IamPolicyAttachment } from "@cdktf/provider-aws/lib/iam";
 
-class MyStack extends TerraformStack {
+class secHubIntegration extends TerraformStack {
   constructor(scope: Construct, name: string) {
     super(scope, name);
 
@@ -94,5 +94,5 @@ class MyStack extends TerraformStack {
   }}
 
 const app = new App();
-new MyStack(app, "cdktf");
+new secHubIntegration(app, "cdktf");
 app.synth();
