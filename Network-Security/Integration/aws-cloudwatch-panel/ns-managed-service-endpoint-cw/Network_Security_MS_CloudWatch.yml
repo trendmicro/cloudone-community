@@ -7,9 +7,10 @@ Parameters:
     Default: Cloud_One_Network_Security_Panel
   LogStream:
     Description: Insert name of NS log stream
+    AllowedPattern: ^NSaaS-[0-9]{12}-[0-9]{12}-vpc-([a-zA-Z0-9]{8}|[a-zA-Z0-9]{17})$ 
     Type: String 
   C1NSRegion:
-    Description: Insert the Region where the Network Security Instance sits
+    Description: Insert the Region where the Network Security VPC endpoint sits
     Type: String
     Default: us-east-1
 Resources:
