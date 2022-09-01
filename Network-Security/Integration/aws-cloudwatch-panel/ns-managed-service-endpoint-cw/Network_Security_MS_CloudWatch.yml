@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Creates Cloudwatch Dashboard for Cloud One Network Security
+Parameters:
+  DashboardName:
+    Description: Insert the Name for the CloudWatch Panel
+    Type: String
+    Default: Cloud_One_Network_Security_Panel
+  LogStream:
+    Description: Insert name of NS log stream
+    Type: String 
+  C1NSRegion:
+    Description: Insert the Region where the Network Security Instance sits
+    Type: String
+    Default: us-east-1
+Resources:
+  BasicDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Ref DashboardName
+      DashboardBody:
+        Fn::Sub: '{
+              "widgets": [
+                  {
+                     "type": "log",
+                     "x":0,
+                     "y":24,
+                     "width": 24,
+                     "height": 6,
+                     "properties": {
+                         "region":"${C1NSRegion}",
+                         "view": "bar",
+                         "period": 60,
+                         "title": "Cloud One Network Security - BLOCK Action",
+                         "stat": "Sum",
+                         "query": "SOURCE \u0022${LogStream}\u0022 | fields @timestamp, @message \n| sort @timestamp desc \n| limit 20 \n| filter @message like \"Block\" \n| filter @message not like \"IP Reputation\" \n| stats count() by bin(30s) "
+                     }
+                  },
+                  {
+                     "type": "log",
+                     "x":0,
+                     "y":31,
+                     "width": 24,
+                     "height": 6,
+                     "properties": {
+                         "region":"${C1NSRegion}",
+                         "view": "table",
+                         "period": 60,
+                         "title": "Cloud One Network Security LOGS VIEW - BLOCK Action",
+                         "stat": "Sum",
+                         "query": "SOURCE \u0022${LogStream}\u0022 | fields @timestamp, @message \n| sort @timestamp desc \n| limit 20 \n| filter @message like \"Block\" \n| filter @message not like \"IP Reputation\" "
+                     }
+                  },
+                  {
+                     "type": "log",
+                     "x":0,
+                     "y":38,
+                     "width": 24,
+                     "height": 6,
+                     "properties": {
+                         "region":"${C1NSRegion}",
+                         "view": "bar",
+                         "period": 60,
+                         "title": "Cloud One Network Security - PERMIT Action",
+                         "stat": "Sum",
+                         "query": "SOURCE \u0022${LogStream}\u0022 | fields @timestamp, @message \n| sort @timestamp desc \n| limit 20 \n| filter @message like \"Permit\" \n| filter @message not like \"IP Reputation\" \n| stats count() by bin(30s) "
+                     }
+                  },
+                  {
+                     "type": "log",
+                     "x":0,
+                     "y":45,
+                     "width": 24,
+                     "height": 6,
+                     "properties": {
+                         "region":"${C1NSRegion}",
+                         "view": "table",
+                         "period": 60,
+                         "title": "Cloud One Network Security LOGS VIEW - PERMIT Action",
+                         "stat": "Sum",
+                         "query": "SOURCE \u0022${LogStream}\u0022 | fields @timestamp, @message \n| sort @timestamp desc \n| limit 20 \n| filter @message like \"Permit\" \n| filter @message not like \"IP Reputation\" "
+                     }
+                  },
+                  {
+                     "type": "log",
+                     "x":0,
+                     "y":52,
+                     "width": 24,
+                     "height": 6,
+                     "properties": {
+                         "region":"${C1NSRegion}",
+                         "view": "bar",
+                         "period": 60,
+                         "title": "Cloud One Network Security - Geo BLOCK",
+                         "stat": "Sum",
+                         "query": "SOURCE \u0022${LogStream}\u0022 | fields @timestamp, @message \n| sort @timestamp desc \n| limit 20 \n| filter @message like \"Block\" \n| filter @message like \"IP Reputation\" \n| stats count() by bin(30s) "
+                     }
+                  },
+                  {
+                     "type": "log",
+                     "x":0,
+                     "y":59,
+                     "width": 24,
+                     "height": 6,
+                     "properties": {
+                         "region":"${C1NSRegion}",
+                         "view": "table",
+                         "period": 60,
+                         "title": "Cloud One Network Security - Geo BLOCK",
+                         "stat": "Sum",
+                         "query": "SOURCE \u0022${LogStream}\u0022 | fields @timestamp, @message \n| sort @timestamp desc \n| limit 20 \n| filter @message like \"Block\" \n| filter @message like \"IP Reputation\" "
+                     }
+                  }
+              ]
+          }'
