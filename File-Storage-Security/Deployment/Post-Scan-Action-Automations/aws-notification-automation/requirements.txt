@@ -1,0 +1,7 @@
+boto3
+botocore
+random
+string
+urllib3
+json
+argparse
