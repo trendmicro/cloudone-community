@@ -34,6 +34,6 @@ This script will subscribe a deployed Notification plugin like Slack to all depl
    - Open terminal/cmd:
    - Can optionally define AWS Profile to use with ```--awsprofile <name of profile to use>``` flag.
    ```
-      .\python-aws-automate-subscription.py --apikey <apikey here> --c1region <c1 account region> --functionname <name of notification function> --functionarn <notification function ARN value> --awsregion <aws region to where you are deploying to> --pluginregion <aws region where notification plugin resides>
+      .\python-aws-automate-subscription.py --apikey <apikey here> --c1region <c1 account region> --functionname <name of notification function> --functionarn <notification function ARN value> --pluginregion <aws region where notification plugin resides>
    ```  
 
