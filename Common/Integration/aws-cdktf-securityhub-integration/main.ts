@@ -22,6 +22,7 @@ class secHubIntegration extends TerraformStack {
     const cloudOneAccountId = new TerraformVariable(this, 'cloudOneAccountId', {
       type: 'string',
       description: 'The ID of the Cloud One account'
+      // To get the Account ID, log in to the Cloud One and access this page: https://cloudone.trendmicro.com/account-selection, copy the ID related to the desired account
     });
     
     const securityHubProductARN = 'arn:aws:securityhub:'+awsRegion.value+':'+securityHubAccountId.value+':product/'+securityHubAccountId.value+'/default'
