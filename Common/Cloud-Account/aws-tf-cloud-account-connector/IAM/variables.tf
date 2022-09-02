@@ -6,27 +6,13 @@
  }
 
  variable "aws-account-id" {
-   type = string
+   type = number
    description = "AWS Account ID"
-   default = "PLEASE_CHANGE_ME"
- }
-
- variable "aws-account-label" {
-   type = string
-   description = "AWS Account Label"
-   default = "PLEASE_CHANGE_ME"
- }
-
-  variable "aws-account-description" {
-   type = string
-   description = "AWS Account Description"
-   default = "PLEASE_CHANGE_ME"
  }
 
  variable "externalid" {
-   type = string
+   type = number
    description = "Cloud One External ID or Cloud One Account ID"
-   default = "PLEASE_CHANGE_ME"
  }
 
  variable "policy-prefix" {
@@ -44,11 +30,5 @@
  variable "c1-region" {
    type = string
    description = "Cloud One region"
-   default = "PLEASE_CHANGE_ME"
- }
-
- variable "c1-api-key" {
-   type = string
-   description = "Cloud One Api Key"
-   default = "PLEASE_CHANGE_ME"
+   default = "us-1"
  }
