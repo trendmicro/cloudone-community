@@ -1,3 +1,5 @@
+from cgitb import reset
+from http.client import responses
 import os.path
 import json
 import time
@@ -47,11 +49,13 @@ def get_exclusions(filename):
 
 # get list of buckets available in aws
 def get_buckets(content):
+    # remove spaces from exclusions list
+    content = [entry.strip() for entry in content]
     # setup client for s3
     s3_client = boto3.client('s3')
     # create empty list
     list_of_buckets = []
-    # call list buckets
+    # call to list buckets
     bucket_list = s3_client.list_buckets()
     name = bucket_list['Buckets']
 
@@ -61,10 +65,10 @@ def get_buckets(content):
     # remove excluded buckets from list
     for item in content:
         list_of_buckets.remove(item)
+
     get_encryption_region(list_of_buckets)
 
-
-# gather encrytpion status and bucket region
+# gather encryption status and bucket region
 def get_encryption_region(list_of_buckets):
     s3_client = boto3.client("s3")
     # check if encryption exists on bucket
@@ -103,8 +107,12 @@ def get_encryption_region(list_of_buckets):
             tags = response["TagSet"]
             tag_status = tags
             if (next((x for x in tag_status if x['Key'] == 'FSSMonitored'), None)) == None:
-                add_tag(s3_client, bucket_name, tag_list=tag_status)
-                deploy_storage(kms_arn, region, bucket_name)
+                # if a exisitng lambda s3 notification exists then skip
+                if check_for_s3_notification(s3_client, bucket_name) is True:
+                    pass
+                else:
+                    deploy_storage(kms_arn, region, bucket_name)
+                    add_tag(s3_client, bucket_name, tag_list=tag_status)
             else:
                 for tags in tag_status:
                     if tags["Key"] == "FSSMonitored" and tags["Value"].lower() == "no":
@@ -114,21 +122,44 @@ def get_encryption_region(list_of_buckets):
                     elif tags["Key"] == "FSSMonitored" and tags["Value"].lower() == "yes":
                         print("S3: " + bucket_name + " FSS Tag Found!, FSS is already deployed!")
                         break
-
+        # No tags at all on bucket                  
         except ClientError:
             no_tags = "does not have tags"
             tag_status = no_tags
-            deploy_storage(kms_arn, region, bucket_name)
-            add_tag(s3_client, bucket_name, tag_list=[])
+            # if a exisiting lambda s3 notification exists then skip
+            if check_for_s3_notification(s3_client, bucket_name) is True:
+                pass
+            else:
+                deploy_storage(kms_arn, region, bucket_name)
+                add_tag(s3_client, bucket_name, tag_list=[])
 
-
+# adds FSS Monitored Tag to s3
 def add_tag(s3_client, bucket_name, tag_list):
     tag_list.append({'Key': 'FSSMonitored', 'Value': 'Yes'})
     s3_client.put_bucket_tagging(
         Bucket=bucket_name,
         Tagging={"TagSet": tag_list},
     )
-
+# determines if a S3 event notification exists
+def check_for_s3_notification(s3_client, bucket_name):
+    response = s3_client.get_bucket_notification_configuration(
+        Bucket=bucket_name
+    )
+    # s3:ObjectCreated:* event in use
+    if "LambdaFunctionConfigurations" in response:
+        event = response["LambdaFunctionConfigurations"][0]["Events"]
+        print("Skip: " + bucket_name + ' ' + str(event) + " in use, See: " + "https://cloudone.trendmicro.com/docs/file-storage-security/aws-object-created-event-in-use/")
+        return True
+    elif "QueueConfigurations" in response:
+        event = response["QueueConfigurations"][0]["Events"]
+        print("Skip: " + bucket_name + ' ' + str(event) + " in use, See: " + "https://cloudone.trendmicro.com/docs/file-storage-security/aws-object-created-event-in-use/")
+        return True
+    elif "TopicConfigurations" in response:
+        event = response["TopicConfigurations"][0]["Events"]
+        print("Skip: " + bucket_name + ' ' + str(event) + " in use, See: " + "https://cloudone.trendmicro.com/docs/file-storage-security/aws-object-created-event-in-use/")
+        return True
+    else:
+        return False
 
 # function to deploy fss storage stack
 def deploy_storage(kms_arn, region, bucket_name):
