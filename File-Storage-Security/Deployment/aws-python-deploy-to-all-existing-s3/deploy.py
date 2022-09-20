@@ -24,7 +24,6 @@ parser.add_argument("--c1region", required=True, type=str, help="Cloud One Accou
 parser.add_argument("--sqs", required=True, type=str, help="SQS URL")
 parser.add_argument("--scanner", required=True, type=str, help="Scanner Stack Name")
 parser.add_argument("--apikey", required=True, type=str, help="Cloud One API Key")
-parser.add_argument("--external_ID", required=True, type=str, help="Cloud One Account ID/External ID")
 args = parser.parse_args()
 
 scanner_stack_name = args.scanner
@@ -32,7 +31,6 @@ aws_account_id = args.account
 cloud_one_region = args.c1region
 sqs_url = args.sqs
 ws_api = args.apikey
-ext_id = args.external_ID
 filename = "exclude.txt"
 stacks_api_url = "https://filestorage." + cloud_one_region + ".cloudone.trendmicro.com/api/"
 
@@ -173,7 +171,20 @@ def deploy_storage(kms_arn, region, bucket_name):
             'mode': 'standard'
         }
     )
-
+    # gather cloud one ext id
+    r = http.request(
+        "GET",
+        stacks_api_url+"external-id",
+        headers={
+            "Authorization": "ApiKey " + ws_api,
+            "Api-Version": "v1",
+        },
+    )
+    try:
+        ext_id = json.loads(r.data.decode("utf-8"))['externalID']
+    except json.decoder.JSONDecodeError:
+        time.sleep(1)
+        ext_id = json.loads(r.data.decode("utf-8"))['externalID']
     # set fss api doc parameters
     ExternalID = {"ParameterKey": "ExternalID", "ParameterValue": ext_id}
     CloudOneRegion = {"ParameterKey": "CloudOneRegion", "ParameterValue": cloud_one_region}
@@ -213,12 +224,13 @@ def deploy_storage(kms_arn, region, bucket_name):
     # gather scanner stack id
     id_call = http.request('GET', stacks_api_url + "stacks", fields={"limit": "100", "type": "scanner"},
                            headers={'Authorization': 'ApiKey ' + ws_api, 'Api-Version': 'v1'})
-
-    id_resp = json.loads(id_call.data.decode('utf-8'))['stacks']
-
+    try:
+        id_resp = json.loads(id_call.data.decode('utf-8'))['stacks']
+    except json.decoder.JSONDecodeError:
+        time.sleep(1)
+        id_resp = json.loads(id_call.data.decode('utf-8'))['stacks']
     for data in id_resp:
         stack_id = data['stackID']
-
     add_to_cloudone(ws_api, stack_id, storage_stack)
 
 # call to cloudone to register stacks in FSS
