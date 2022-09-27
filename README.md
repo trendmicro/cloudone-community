@@ -48,7 +48,8 @@ python --version
 3. If you are new to GitHub / Git, review the helpful documentation here in our [Wiki](https://github.com/trendmicro/cloudone-community/wiki) before proceeding.
 4.  Fork this repository.
 5.  Create a new feature branch, preferably from the `main` branch.
-6.  Make your changes.
-7.  Submit a pull request with an explanation for your changes or additions.
+6.  Commit your code with a message that is structured according to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
+7.  Make your changes.
+8.  Submit a pull request with an explanation for your changes or additions.
 
 We will review and work with you to release the changes.
