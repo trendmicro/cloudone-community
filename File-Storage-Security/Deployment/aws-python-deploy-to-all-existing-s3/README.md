@@ -13,6 +13,8 @@ This script will deploy File Storage Security Stack to all buckets unless define
       - StackName: `Enter name for stack`
    * Obtain your Cloud One API Key
       - Generate API Key: [Cloud One API Key](https://cloudone.trendmicro.com/docs/account-and-user-management/c1-api-key/)
+   * Obtain your Cloud One Account ID/External ID
+      - Sign in to your Cloud One console > Subscription Management > Cloud One Account ID
 
 <hr>
 
@@ -32,12 +34,22 @@ This script will deploy File Storage Security Stack to all buckets unless define
    ```
 **3. Run Script**
    - Open terminal/cmd:
+   
+   [Windows]
    ```
       .\deploy.py --account <aws account id> --c1region <cloud one region; example: us-1> --scanner <Scanner Stack Name> --sqs <SQS URL> --apikey <CloudOne-API-Key>
    ```  
+   
+   [Mac/Linux]
+   ```
+     python3 deploy.py --account <aws account id> --c1region <cloud one region; example: us-1> --scanner <Scanner Stack Name> --sqs <SQS URL> --apikey <CloudOne-API-Key>
+   ```
 
 
 # Additional Notes
+
+### S3:ObjectCreated:* event in use
+S3 buckets with existing event notification will be skipped for FSS deployment. Please see the Cloud One documentation [here](https://cloudone.trendmicro.com/docs/file-storage-security/aws-object-created-event-in-use/) for further deployment details.
 
 ### Tags
 
