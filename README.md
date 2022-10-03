@@ -2,7 +2,11 @@
 
 This is an Open Source community project. Project contributors may be able to help, depending on their time and availability. Please be specific about what you're trying to do, your system, and steps to reproduce your scenario when opening a GitHub issue.
 
-For bug reports or new feature requests to the team, please [open an issue](https://github.com/trendmicro/cloudone-community/issues/new/choose). You are also welcome to [contribute](https://github.com/trendmicro/cloudone-community#for-contributors) to this project.
+For bug reports, please [open an issue](https://github.com/trendmicro/cloudone-community/issues/new/choose)
+
+For any other topic including but not limited to: ideas, feedback, questions, and many more... We have a discussion tab enabled, in this tab, you can ask questions and interact with all of our community. To get started, here's how you can [Open a Discussion](https://github.com/trendmicro/cloudone-community/discussions/new).
+
+You are also welcome to [contribute](https://github.com/trendmicro/cloudone-community#for-contributors) to this project to improve our community.
 
 > Note: Official support from Trend Micro is not available. Individual contributors may be Trend Micro employees but are not official support.
 
@@ -43,7 +47,7 @@ python --version
 
 ### Contribute
 
-1.  [Open an issue](https://github.com/trendmicro/cloudone-community/issues/new/choose) before you start contributing so we can discuss the changes and it's alignment with the scope of this project.
+1.  [Open a Discussion](https://github.com/trendmicro/cloudone-community/discussions/new) before you start contributing so we can discuss the changes and it's alignment with the scope of this project.
 2.  Review the [Contributor Guidelines](https://github.com/trendmicro/cloudone-community#for-contributors)
 3. If you are new to GitHub / Git, review the helpful documentation here in our [Wiki](https://github.com/trendmicro/cloudone-community/wiki) before proceeding.
 4.  Fork this repository.
