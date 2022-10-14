@@ -18,7 +18,7 @@ if ! type curl >/dev/null 2>&1; then
     exit 1
 fi
 
-curl -L $MANAGERURL/software/deploymentscript/platform/linuxdetectscriptv1/ -o /tmp/PlatformDetection $CURLOPTIONS --insecure
+curl -L $MANAGERURL/software/deploymentscript/platform/linuxdetectscriptv1/ -o /tmp/PlatformDetection "$CURLOPTIONS" --insecure
 
 if [ -s /tmp/PlatformDetection ]; then
     . /tmp/PlatformDetection
@@ -47,7 +47,7 @@ echo Downloading agent package...
 if [[ $isRPM == 1 ]]; then package='agent.rpm'
     else package='agent.deb'
 fi
-curl -H "Agent-Version-Control: on" -L $MANAGERURL/software/agent/${runningPlatform}${majorVersion}/${archType}/$package?tenantID=108940 -o /tmp/$package $CURLOPTIONS --insecure
+curl -H "Agent-Version-Control: on" -L $MANAGERURL/software/agent/"${runningPlatform}""${majorVersion}"/"${archType}"/$package?tenantID=108940 -o /tmp/$package "$CURLOPTIONS" --insecure
 
 echo Installing agent package...
 rc=1
@@ -72,4 +72,4 @@ echo Install the agent package successfully
 
 sleep 15
 /opt/ds_agent/dsa_control -r
-/opt/ds_agent/dsa_control -a $ACTIVATIONURL "tenantID:"$TENANTID "token:"$TOKEN
+/opt/ds_agent/dsa_control -a $ACTIVATIONURL "tenantID:""$TENANTID" "token:""$TOKEN"
