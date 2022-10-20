@@ -1,0 +1,25 @@
+type: CustomRules
+id: CUSTOM-eajYWaE6Ve3k
+attributes:
+    name: S3 Bucket Name should be valid
+    description: Buckets must not be named Test
+    service: S3
+    resourceType: s3-bucket
+    remediationNotes: Rename the bucket to a shorter name
+    attributes:
+    -   name: bucketName
+        path: data.Name
+        required: true
+    rules:
+    -   conditions:
+            any:
+            -   value: Test
+                operator: equal
+                fact: bucketName
+        event:
+            type: Mis-named S3 bucket created
+    severity: HIGH
+    provider: aws
+    categories:
+    - operational-excellence
+    enabled: true

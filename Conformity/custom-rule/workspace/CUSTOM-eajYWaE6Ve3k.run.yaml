@@ -1,0 +1,66 @@
+-   region: us-west-2
+    resource: fss-test-atirado-29032020
+    ccrn: ccrn:aws:b0f9973f-f191-4380-8e13-d27f48144e4b:S3:us-west-2:fss-test-atirado-29032020
+    status: FAILURE
+    message: S3 Bucket fss-test-atirado-29032020 failed 'Mis-named S3 bucket created'
+        rule condition.
+    extradata:
+    -   name: failedEvent
+        label: Failed Condition Event
+        value: Mis-named S3 bucket created
+        type: META
+-   resourceData:
+        accountId: b0f9973f-f191-4380-8e13-d27f48144e4b
+        organisationId: '820170596184'
+        resourceId: fss-test-atirado-29032020
+        service: S3
+        ccrn: ccrn:aws:b0f9973f-f191-4380-8e13-d27f48144e4b:S3:us-west-2:fss-test-atirado-29032020
+        region: us-west-2
+        descriptorType: s3-bucket
+        data:
+            Name: fss-test-atirado-29032020
+            CreationDate: '2021-03-29T16:42:20.000Z'
+            region: us-west-2
+            resourceId: fss-test-atirado-29032020
+            macieFindings:
+                error:
+                    code: AccessDeniedException
+                    message: Macie is not enabled.
+            Grants:
+            -   Grantee:
+                    DisplayName: antonio
+                    ID: eb4e9d8f68f61e2bb5db38a39e3fa5515b2df89deac296fe74dbee79725844a6
+                    Type: CanonicalUser
+                Permission: FULL_CONTROL
+            Owner:
+                DisplayName: antonio
+                ID: eb4e9d8f68f61e2bb5db38a39e3fa5515b2df89deac296fe74dbee79725844a6
+            Policy: '{"Version":"2012-10-17","Id":"Policy1617210524199","Statement":[{"Sid":"Stmt1617210333419","Effect":"Allow","Principal":"*","Action":"s3:GetObject","Resource":"arn:aws:s3:::fss-test-atirado-29032020/*","Condition":{"StringNotEquals":{"s3:ExistingObjectTag/fss-scan-result":"malicious"}}}]}'
+            Encryption: null
+            Lifecycle: null
+            LoggingEnabled: null
+            BucketVersioning:
+                Status: Enabled
+            ObjectLockConfiguration: null
+            BucketAccelerateConfiguration: {}
+            BucketWebsite:
+                IndexDocument:
+                    Suffix: index.html
+                ErrorDocument:
+                    Key: error.html
+                RoutingRules: []
+            Tags: null
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: false
+                IgnorePublicAcls: false
+                BlockPublicPolicy: false
+                RestrictPublicBuckets: false
+            PolicyStatus:
+                IsPublic: true
+            macieFindingStatistics: null
+        name: S3 Bucket
+        link: https://s3.console.aws.amazon.com/s3/buckets/fss-test-atirado-29032020/?region=us-west-2&tab=overview
+        linkTitle: fss-test-atirado-29032020
+        provider: aws
+        lastModifiedDate: 1666127233563
+        lastModifiedBy: SYSTEM
