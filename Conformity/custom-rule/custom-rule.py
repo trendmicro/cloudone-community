@@ -215,7 +215,6 @@ class Get(ConfiguredCommand):
 			print(f'Custom rule saved to file {ruleFilename}.yaml')
 			pass
 	pass
-
 class Update(ConfiguredCommand):
 
 	def __init__(self, name):
@@ -308,15 +307,14 @@ class List(ConfiguredCommand):
 			endpoint = self.apiEndpoint
 
 			response = requests.get(url=endpoint, headers=self.header)
-			response.raise_for_status()
+			rules = response.json()
 
 			if "errors" in rules:
 				raise ValueError(f'Error {response.json()}')
 
-			rules = response.json()
 			if len(rules["data"]) == 0:
 				raise IndexError("No custom rules returned.")
-
+			
 			for rule in rules["data"]:
 				ruleId = rule["id"]
 				writeFile(folder=self.workspaceFolder, filename=f'{ruleId}.yaml', content=rule)
