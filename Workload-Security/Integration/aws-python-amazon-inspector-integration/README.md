@@ -1,9 +1,17 @@
+[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=vulnerabilityReportStack&templateURL=https://vulnerabilitytestbucket.s3.amazonaws.com/vulnerability_template.yaml)1
+
+[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=autoAssignedReportStack&templateURL=https://vulnerabilitytestbucket.s3.amazonaws.com/auto-assign-ips-rule.yaml)2
+
 Amazon Inspector integration with Cloud One Workload Security
 
 Pre-Requisites
 
 • You must enable Amazon Inspector in your AWS account
+
+
 • You need to verify the email you want to send the report (both the vulnerability report and the auto assigned report) to in Amazon SES
+
+
 
 Background Information
 
