@@ -2,6 +2,7 @@ Parameters:
   Region:
     Type: String
     Description: Please enter the region in which the lambda will be executed
+    Default : us-east-1
     AllowedValues:
       - us-east-1
       - us-east-2	
@@ -27,15 +28,21 @@ Parameters:
       - me-south-1
       - me-central-1
       - sa-east-1
+
   ApiKey:
     Type: String
-    Description: Please enter your Cloud One Workload Security API Key
+    NoEcho: "true"
+    Description: Please enter your Cloud One API Key
   EmailSender:
     Type: String
     Description: Email id to be used for sending report
   EmailRecipients:
     Type: String
     Description: Comma separated email ids for recieving report
+  CronSchedule:
+    Type: String
+    Description: Schedule the time you would like the lambda function to run in the cron format (Default is every 3 min after deployment)
+    Default: cron(0/3 * ? * * *)
   WorkloadSecurityHost:
     Type: String
     Description: Enter your Workload Security Host 
@@ -50,10 +57,6 @@ Parameters:
       - https://workload.au-1.cloudone.trendmicro.com/api
       - https://workload.ca-1.cloudone.trendmicro.com/api
       - https://workload.sg-1.cloudone.trendmicro.com/api
-  CronSchedule:
-    Type: String
-  Description: Schedule the time you would like the lambda function to run in the cron format (Default is every 3 min after deployment)
-  Default: cron(0/3 * ? * * *)
 
 Resources:
   LambdaLayer2:
