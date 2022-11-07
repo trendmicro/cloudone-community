@@ -43,7 +43,7 @@ Parameters:
   CronSchedule:
     Type: String
     Description: Schedule the time you would like the lambda function to run in the cron format (Default is every wednesday)
-    Default: cron(0 0 ? * 3)
+    Default: cron(0 12 ? * WED *)
   CloudOneRegion:
     Type: String
     Description: Enter your Cloud One Region
