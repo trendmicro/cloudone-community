@@ -1,6 +1,5 @@
-[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=vulnerabilityReportStack&templateURL=https://vulnerabilitytestbucket.s3.amazonaws.com/vulnerability_template.yaml)1
+[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1-inspector-findings-protection&templateURL=https://vulnerabilitytestbucket.s3.amazonaws.com/c1-inspector-findings-protection.yaml)
 
-[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=autoAssignedReportStack&templateURL=https://vulnerabilitytestbucket.s3.amazonaws.com/auto-assign-ips-rule.yaml)2
 
 Amazon Inspector integration with Cloud One Workload Security
 
