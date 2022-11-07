@@ -11,7 +11,7 @@ Pre-Requisites
 
 • You need to verify the email you want to send the report (both the vulnerability report and the auto assigned report) to in Amazon SES
 
-
+. Generate the [API Key](https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/) from Cloud One
 
 Background Information
 
