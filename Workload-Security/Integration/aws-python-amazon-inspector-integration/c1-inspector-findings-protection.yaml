@@ -42,8 +42,8 @@ Parameters:
     Description: Comma separated (without spaces) email addresses for recieving report
   CronSchedule:
     Type: String
-    Description: Schedule the time you would like the lambda function to run in the cron format (Default is every 5 min after deployment)
-    Default: cron(0/5 * ? * * *)
+    Description: Schedule the time you would like the lambda function to run in the cron format (Default is every wednesday)
+    Default: cron(0 0 ? * 3)
   CloudOneRegion:
     Type: String
     Description: Enter your Cloud One Region
