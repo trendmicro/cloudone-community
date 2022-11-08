@@ -846,18 +846,6 @@ Resources:
       Timeout: 300
       Role: !GetAtt LambdaRole.Arn
 
-  PermissionForEventsToInvokeLambda: 
-    Type: AWS::Lambda::Permission
-    Properties: 
-      FunctionName: !Ref "AutoAssignIpsRuleLambda"
-      Action: "lambda:InvokeFunction"
-      Principal: "events.amazonaws.com"
-      SourceArn: 
-        Fn::GetAtt: 
-          - "ScheduledRule"
-          - "Arn"
-          - "Lambda"
-
   ScheduledRule: 
     Type: AWS::Events::Rule
     Properties: 
@@ -871,6 +859,7 @@ Resources:
               - "VulnerabilityReportLambda"
               - "Arn"
           Id: "TargetFunctionV1"
+  
   PermissionForEventsToInvokeLambda: 
     Type: AWS::Lambda::Permission
     Properties: 
