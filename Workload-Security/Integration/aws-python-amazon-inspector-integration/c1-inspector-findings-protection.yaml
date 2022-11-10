@@ -120,9 +120,6 @@ Resources:
           sender: !Ref EmailSender
           recipients: !Ref EmailRecipients
           cloudoneregion: !Ref CloudOneRegion
-          auto_assign_lambda_funtion_name: AutoAssignIpsRuleLambda
-
-
       Code:
         ZipFile: |
             from __future__ import print_function
@@ -152,13 +149,11 @@ Resources:
             RECIPIENTS = os.environ.get('recipients')
             API_KEY = os.environ.get("apikey")
             HOST = f"https://workload.{os.environ.get('cloudoneregion')}.cloudone.trendmicro.com/api"
-            AUTO_ASSIGN_LAMBDA_FUNCTION = os.getenv("auto_assign_lambda_funtion_name")
 
 
-            def cves_from_instance(instance_id):
+            def cves_from_instance(instance_id, inspector):
                 cves = list()
                 result = list()
-                inspector = boto3.client("inspector2")
                 print('<<<<<<< checking instance id:', instance_id)
                 resp = inspector.list_findings(
                     filterCriteria={
@@ -187,10 +182,9 @@ Resources:
                 return cves
 
 
-            def all_instances_details_from_inspector():
+            def all_instances_details_from_inspector(inspector):
                 instances = list()
                 result = list()
-                inspector = boto3.client("inspector2")
                 findings = inspector.list_finding_aggregations(
                     aggregationType="AWS_EC2_INSTANCE",
                     # aggregationRequest='AWS_EC2_INSTANCE',
@@ -214,38 +208,6 @@ Resources:
                     instances.append(instance_details)
                 print("Found total instances =", len(instances))
                 return instances
-
-
-            def cves_from_instance(instance_id):
-                cves = list()
-                result = list()
-                inspector = boto3.client("inspector2")
-                # print('instance', instance_id)
-                resp = inspector.list_findings(
-                    filterCriteria={
-                        "findingStatus": [{"comparison": "EQUALS", "value": "ACTIVE"}],
-                        "resourceId": [{"comparison": "EQUALS", "value": instance_id}],
-                    }
-                )
-                result.extend(resp["findings"])
-                next_token = resp.get("nextToken")
-                while next_token:
-                    resp = inspector.list_findings(
-                        filterCriteria={
-                            "findingStatus": [{"comparison": "EQUALS", "value": "ACTIVE"}],
-                            "resourceId": [{"comparison": "EQUALS", "value": instance_id}],
-                        },
-                        nextToken=next_token,
-                    )
-                    result.extend(resp["findings"])
-                    next_token = resp.get("nextToken")
-
-                for finding in result:
-                    cve = finding.get("packageVulnerabilityDetails", {}).get("vulnerabilityId")
-                    if cve:
-                        cves.append(cve)
-                    # print(cve)
-                return cves
 
 
             def ds_config_and_version():
@@ -286,22 +248,16 @@ Resources:
 
 
             def lambda_handler(event, context):
-                # trigger auto ips rule assign lambda and wait for it to complete
-                lambda_client = boto3.client('lambda')
-                lambda_payload = b''
-                lambda_client.invoke(FunctionName=AUTO_ASSIGN_LAMBDA_FUNCTION, 
-                                     InvocationType='RequestResponse',
-                                     Payload=lambda_payload)
-
                 csv_rows = list()
                 conf, api_version = ds_config_and_version()
-                all_instance_details = all_instances_details_from_inspector()
+                inspector = boto3.client("inspector2")
+                all_instance_details = all_instances_details_from_inspector(inspector)
                 for instance_details in all_instance_details:
                     instance_id = instance_details["id"]
                     instance_name = instance_details["name"]
 
                     print(instance_name, instance_id)
-                    cves = cves_from_instance(instance_id)
+                    cves = cves_from_instance(instance_id, inspector)
                     print("inspector", cves)
 
                     search_criteria = ds.SearchCriteria()
@@ -386,7 +342,7 @@ Resources:
                 csv_file.seek(0)
 
                 # The subject line for the email.
-                subject = "Vulnrebility Report (CVEs) from Intrusion Prevention"
+                subject = "Vulnerability Report (CVEs) from Intrusion Prevention"
 
                 protected_instances_html = '<table border="1">' + "\n"
                 # write headers
@@ -402,14 +358,12 @@ Resources:
                     protected_instances_html += "</tr>" + "\n"
                 protected_instances_html += "</table>"
 
-
-
                 csv_rows_unprotected_instances = list()
-                all_instance_details = all_instances_details_from_inspector()
+                all_instance_details = all_instances_details_from_inspector(inspector)
                 for instance_details in all_instance_details:
                     id = instance_details["id"]
                     name = instance_details["name"]
-                    cves = cves_from_instance(id)
+                    cves = cves_from_instance(id, inspector)
                     if cves:
                         for cve in cves:
                             csv_rows_unprotected_instances.append([id, name, cve])
@@ -441,10 +395,10 @@ Resources:
                 body_html = f"""<html>
                 <head></head>
                 <body>
-                  <h1>Protected Instances</h1>
-                  {protected_instances_html}
-                  <h1>Unprotected Instances</h1>
-                  {unprotected_instances_html}
+                    <h1>Protected Instances</h1>
+                    {protected_instances_html}
+                    <h1>Unprotected Instances</h1>
+                    {unprotected_instances_html}
                 </body>
                 </html>
                 """
@@ -460,7 +414,6 @@ Resources:
                         "attachment": tmp_csv_file_unprotected_instances,
                     }],
                 )
-
       FunctionName: "vulnerability_report_lambda"
       Handler: "index.lambda_handler"
       Layers:
@@ -482,6 +435,7 @@ Resources:
           sender: !Ref EmailSender
           recipients: !Ref EmailRecipients
           cloudoneregion: !Ref CloudOneRegion
+          vulnerability_report_lambda_function_name: vulnerability_report_lambda
       Code:
         ZipFile: |
             import sys, warnings
@@ -505,6 +459,7 @@ Resources:
             RECIPIENTS = os.environ.get("recipients")
             API_KEY = os.environ.get("apikey")
             HOST = f"https://workload.{os.environ.get('cloudoneregion')}.cloudone.trendmicro.com/api"
+            VULNERABILITY_REPORT_LAMBDA_FUNCTION = os.getenv("vulnerability_report_lambda_function_name")
 
 
             def ds_config_and_version():
@@ -640,10 +595,9 @@ Resources:
                     )
 
 
-            def cves_from_instance(instance_id):
+            def cves_from_instance(instance_id, inspector):
                 cves = list()
                 result = list()
-                inspector = boto3.client("inspector2", region_name=AWS_REGION)
                 # print('instance', instance_id)
                 resp = inspector.list_findings(
                     filterCriteria={
@@ -672,10 +626,9 @@ Resources:
                 return cves
 
 
-            def all_instances_details_from_inspector():
+            def all_instances_details_from_inspector(inspector):
                 instances = list()
                 result = list()
-                inspector = boto3.client("inspector2")
                 findings = inspector.list_finding_aggregations(
                     aggregationType="AWS_EC2_INSTANCE",
                     # aggregationRequest='AWS_EC2_INSTANCE',
@@ -752,6 +705,7 @@ Resources:
             def lambda_handler(event, context):
                 add_rules_output = dict()
                 conf, api_version = ds_config_and_version()
+                inspector = boto3.client("inspector2", region_name=AWS_REGION)
 
                 ips_rules = list_all_ips_rules(conf=conf, api_version=api_version)
                 ips_rules_info = dict()
@@ -759,7 +713,8 @@ Resources:
                     if ipr.cve:
                         ips_rules_info[ipr.id] = {"cves": ipr.cve, "name": ipr.name}
 
-                all_instance_details = all_instances_details_from_inspector()
+                inspector = boto3.client("inspector2")
+                all_instance_details = all_instances_details_from_inspector(inspector)
                 for instance_details in all_instance_details:
                     instance_id = instance_details["id"]
                     instance_name = instance_details["name"]
@@ -768,7 +723,7 @@ Resources:
                         conf, api_version, instance_id, ips_rules_info
                     )
                     print(instance_name, instance_id)
-                    cves = cves_from_instance(instance_id)
+                    cves = cves_from_instance(instance_id, inspector)
                     print("deep security", vul_from_instance)
                     print("inspector", cves)
                     for cve in cves:
@@ -835,8 +790,17 @@ Resources:
 
                     send_email(SENDER, RECIPIENTS.split(","), subject, body, body_html)
 
+                # trigger auto ips rule assign lambda and wait for it to complete
+                lambda_client = boto3.client('lambda')
+                lambda_payload = b''
+                lambda_client.invoke(FunctionName=VULNERABILITY_REPORT_LAMBDA_FUNCTION, 
+                                        InvocationType='Event',
+                                        Payload=lambda_payload)
+                print('triggered vulnerability report lambda function')
+
             ######################################## Uncomment the following if you running on your local machine
             # lambda_handler(None, None)
+
 
       FunctionName: "AutoAssignIpsRuleLambda"
       Handler: "index.lambda_handler"
@@ -856,14 +820,14 @@ Resources:
         - 
           Arn: 
             Fn::GetAtt: 
-              - "VulnerabilityReportLambda"
+              - "AutoAssignIpsRuleLambda"
               - "Arn"
           Id: "TargetFunctionV1"
   
   PermissionForEventsToInvokeLambda: 
     Type: AWS::Lambda::Permission
     Properties: 
-      FunctionName: !Ref "VulnerabilityReportLambda"
+      FunctionName: !Ref "AutoAssignIpsRuleLambda"
       Action: "lambda:InvokeFunction"
       Principal: "events.amazonaws.com"
       SourceArn: 
