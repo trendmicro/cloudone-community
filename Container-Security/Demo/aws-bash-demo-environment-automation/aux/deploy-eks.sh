@@ -12,7 +12,7 @@ fi
 
 CLUSTER_NAME=$(whoami)-cluster-$RANDOM
 
-echo $CLUSTER_NAME > .container-security-demo
+echo "$CLUSTER_NAME" > .container-security-demo
 
 eksctl create cluster \
     --tags Project=ReInforceContainerSecurityDemo \
@@ -20,5 +20,5 @@ eksctl create cluster \
     --enable-ssm \
     --full-ecr-access \
     --alb-ingress-access \
-    --tags purpose=demo,owner=$(whoami) \
-    --name $CLUSTER_NAME
+    --tags purpose=demo,owner="$(whoami)" \
+    --name "$CLUSTER_NAME"
