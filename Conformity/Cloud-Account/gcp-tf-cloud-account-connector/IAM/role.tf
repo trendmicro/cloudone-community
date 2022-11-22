@@ -6,6 +6,7 @@ resource "google_project_iam_custom_role" "cloud-one-conformity-access" {
   description = "Project level Custom Role for Cloud One Conformity access"
   stage       = "ALPHA"
   permissions = var.permissions
+  
 }
 
 # Create Service Account
@@ -21,7 +22,7 @@ resource "google_service_account" "cloud-one-conformity-service-account" {
 resource "google_project_iam_member" "cloud-one-conformity-service-account-attachment" {
   depends_on = [google_project_iam_custom_role.cloud-one-conformity-access, google_service_account.cloud-one-conformity-service-account]
   project = var.project_id
-  role    = "roles/${google_project_iam_custom_role.cloud-one-conformity-access.name}"
+  role    = "projects/${var.project_id}/roles/${google_project_iam_custom_role.cloud-one-conformity-access.role_id}"
   member  = "serviceAccount:${google_service_account.cloud-one-conformity-service-account.email}"
 }
 
