@@ -1,7 +1,7 @@
 
-variable "region" {
-  description = "The region to deploy to"
-  default     = "us-east1"
+variable "gcp_region" {
+  description = "The GCP region to deploy to"
+  default     = ""
 }
 
 variable "project_id" {

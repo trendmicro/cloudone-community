@@ -32,16 +32,19 @@ To setup the IAM permission I've create a terraform template that you can use, i
 
  To install terraform, follow this [Guide](https://learn.hashicorp.com/tutorials/terraform/install-cli#install-terraform)
 
- First you need to provide in the terraform template (variables.tf file):
+ First you need to provide in the terraform template (variables.tf file) or use the example `gcp.tfvars` file, these are the values that need to be provided:
 
 - Project ID
 - GCP Region
 
- Then you can execute the following:
+Then you can execute the following:
 
    ```bash
    cd IAM
    terraform init
    terraform plan -out=plan
-   terraform apply -auto-approve
+   terraform apply -auto-approve (In case you are replacing the values directly on the `variables.tf`)
+   terraform apply -var-file="gcp.tfvars` (In case you decided to use the `gcp.tfvars`)
    ```
+
+After finish execution, a file called `gcp-key.json` will be at the local path, this file must be used in the conformity UI or API to finish the account onboarding.
