@@ -1,0 +1,9 @@
+cloudOne:
+    apiKey: YOUR_API_HERE
+    endpoint: https://container.YOUR_REGION_HERE.cloudone.trendmicro.com
+    runtimeSecurity:
+        enabled: true
+    vulnerabilityScanning:
+        enabled: true
+    exclusion:
+        namespaces: [ kube-system, calico-system, calico-apiserver, argocd, tigera-operator, argocd, attacker ]
