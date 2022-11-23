@@ -1,0 +1,2 @@
+ignore_templates:
+  - ./Container-Security/Demo/aws-bash-demo-environment-automation/**/*.yaml
