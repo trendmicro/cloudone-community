@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-goof
+  namespace: demo
+  labels:
+    app: java-goof
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: java-goof
+  template:
+    metadata:
+      labels:
+        app: java-goof
+    spec:
+      containers:
+      - name: java-goof
+        image: raphabot/java-goof
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: java-goof-service
+  namespace: demo
+  labels:
+    app: java-goof
+spec:
+  selector:
+    app: java-goof
+  type: LoadBalancer  
+  ports:
+  - port: 80
+    targetPort: 8080
