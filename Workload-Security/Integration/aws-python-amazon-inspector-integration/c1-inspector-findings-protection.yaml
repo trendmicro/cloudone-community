@@ -59,14 +59,14 @@ Parameters:
       - ca-1
       - sg-1
 Resources:
-  LambdaLayer1:
+  PythonPackageLayer:
     Type: "AWS::Lambda::LayerVersion"
     Properties:
       CompatibleRuntimes:
         - python3.9
       Content:
-        S3Bucket: vulnerabilitytestbucket
-        S3Key: "python.zip"
+        S3Bucket: vulnerabilitytestbucket # Replace "vulnerabilitytestbucket" by the name of your bucket where you upload the zip file
+        S3Key: "DeepSecurityPackageLayer.zip" 
       LayerName: "DSlayer"
   LambdaRole: 
     Type: "AWS::IAM::Role"
@@ -84,9 +84,10 @@ Resources:
           - arn:aws:iam::aws:policy/AmazonVPCCrossAccountNetworkInterfaceOperations
           - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
           - arn:aws:iam::aws:policy/AmazonInspector2ReadOnlyAccess
-          - arn:aws:iam::aws:policy/AmazonSESFullAccess
           - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+          - !Ref LambdaSESWritePolicy
           - !Ref LambdaInvokePolicy
+          - !Ref LambdaSecretAcessPolicy
 
   LambdaInvokePolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -99,8 +100,89 @@ Resources:
           Action:
           - lambda:InvokeFunction
           - lambda:InvokeAsync
-          Resource: arn:aws:lambda:*:*:function:*
+          Resource: !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:*
 
+  LambdaSESWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - ses:CreateReceiptRule
+          - ses:UpdateConfigurationSetEventDestination
+          - ses:SetIdentityMailFromDomain
+          - ses:DeleteReceiptFilter
+          - ses:VerifyEmailIdentity
+          - ses:DeleteCustomVerificationEmailTemplate
+          - ses:TestRenderTemplate
+          - ses:CreateReceiptFilter
+          - ses:DeleteReceiptRule
+          - ses:DeleteConfigurationSet
+          - ses:CreateConfigurationSetTrackingOptions
+          - ses:UpdateAccountSendingEnabled
+          - ses:DeleteConfigurationSetEventDestination
+          - ses:VerifyDomainDkim
+          - ses:DeleteVerifiedEmailAddress
+          - ses:VerifyDomainIdentity
+          - ses:CloneReceiptRuleSet
+          - ses:SetIdentityHeadersInNotificationsEnabled
+          - ses:SendEmail
+          - ses:SendTemplatedEmail
+          - ses:SendCustomVerificationEmail
+          - ses:UpdateTemplate
+          - ses:DeleteConfigurationSetTrackingOptions
+          - ses:UpdateConfigurationSetTrackingOptions
+          - ses:SetIdentityNotificationTopic
+          - ses:SetIdentityDkimEnabled
+          - ses:PutConfigurationSetDeliveryOptions
+          - ses:VerifyEmailAddress
+          - ses:UpdateReceiptRule
+          - ses:CreateConfigurationSet
+          - ses:UpdateConfigurationSetReputationMetricsEnabled
+          - ses:DeleteReceiptRuleSet
+          - ses:CreateTemplate
+          - ses:SendRawEmail
+          - ses:ReorderReceiptRuleSet
+          - ses:SendBounce
+          - ses:UpdateConfigurationSetSendingEnabled
+          - ses:SetActiveReceiptRuleSet
+          - ses:CreateCustomVerificationEmailTemplate
+          - ses:UpdateCustomVerificationEmailTemplate
+          - ses:DeleteTemplate
+          - ses:CreateReceiptRuleSet
+          - ses:SetReceiptRulePosition
+          - ses:CreateConfigurationSetEventDestination
+          - ses:SendBulkTemplatedEmail
+          - ses:DeleteIdentity
+          - ses:SetIdentityFeedbackForwardingEnabled
+          Resource: "*"
+
+  LambdaSecretAcessPolicy: 
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - "secretsmanager:GetSecretValue"
+          - "secretsmanager:DescribeSecret"
+          - "sts:AssumeRole"
+          Resource: !Ref ApiKeySecret
+
+  #   This secret holds the Trend Micro Cloud One API key.
+  ApiKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: "TrendMicro/CloudOne/ApiKey"
+      SecretString: !Sub |
+        {
+          "ApiKey": "${ApiKey}"
+        }
   LambdaLayerParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -116,7 +198,7 @@ Resources:
       Environment:
         Variables:
           awsregion: !Ref AwsRegion
-          apikey: !Ref ApiKey
+          c1_api: !Ref ApiKeySecret
           sender: !Ref EmailSender
           recipients: !Ref EmailRecipients
           cloudoneregion: !Ref CloudOneRegion
@@ -124,14 +206,14 @@ Resources:
         ZipFile: |
             from __future__ import print_function
             import os
+            import json
+            import csv
             import sys, warnings
             import boto3
-            from deepsecurity.rest import ApiException
+            from botocore.exceptions import ClientError
             from datetime import datetime
             from pprint import pprint
-            import csv
 
-            from botocore.exceptions import ClientError
             from typing import List
             from email.mime.multipart import MIMEMultipart
             from email.mime.text import MIMEText
@@ -141,15 +223,15 @@ Resources:
             import deepsecurity as ds
             from deepsecurity.models.intrusion_prevention_rule import IntrusionPreventionRule
             from deepsecurity.models.intrusion_prevention_rules import IntrusionPreventionRules
-
+            from deepsecurity.rest import ApiException
+                
 
             API_VERSION = "v1"
             AWS_REGION = os.environ.get('awsregion')
             SENDER = os.environ.get('sender')
             RECIPIENTS = os.environ.get('recipients')
-            API_KEY = os.environ.get("apikey")
             HOST = f"https://workload.{os.environ.get('cloudoneregion')}.cloudone.trendmicro.com/api"
-
+            C1_API_KEY = os.environ.get("c1_api")
 
             def cves_from_instance(instance_id, inspector):
                 cves = list()
@@ -210,14 +292,14 @@ Resources:
                 return instances
 
 
-            def ds_config_and_version():
+            def ds_config_and_version(cloud_one_api_key):
                 # Setup
                 if not sys.warnoptions:
                     warnings.simplefilter("ignore")
                 API_VERSION = "v1"
                 conf = ds.Configuration()
                 conf.host = HOST
-                conf.api_key["Authorization"] = f"ApiKey {API_KEY}"
+                conf.api_key["Authorization"] = f"ApiKey {cloud_one_api_key}"
                 return conf, API_VERSION
 
 
@@ -248,8 +330,13 @@ Resources:
 
 
             def lambda_handler(event, context):
+                # get secret
+                secrets = boto3.client('secretsmanager').get_secret_value(SecretId=C1_API_KEY)
+                sm_data = json.loads(secrets["SecretString"])
+                new_api_format = sm_data["ApiKey"]
+                conf, api_version = ds_config_and_version(new_api_format)
+
                 csv_rows = list()
-                conf, api_version = ds_config_and_version()
                 inspector = boto3.client("inspector2")
                 all_instance_details = all_instances_details_from_inspector(inspector)
                 for instance_details in all_instance_details:
@@ -285,7 +372,7 @@ Resources:
                     num_found = len(computers.computers)
 
                     if num_found == 0:
-                        raise Exception(f"No computers found for instance id: {instance_id}")
+                        print(f"No computers found for instance id: {instance_id}")
 
                     for computer in computers.computers:
                         # print('ips', computer.intrusion_prevention)
@@ -342,7 +429,7 @@ Resources:
                 csv_file.seek(0)
 
                 # The subject line for the email.
-                subject = "Vulnerability Report (CVEs) from Intrusion Prevention"
+                subject = "Vulnrebility Report (CVEs) from Intrusion Prevention"
 
                 protected_instances_html = '<table border="1">' + "\n"
                 # write headers
@@ -414,14 +501,14 @@ Resources:
                         "attachment": tmp_csv_file_unprotected_instances,
                     }],
                 )
+
       FunctionName: "vulnerability_report_lambda"
       Handler: "index.lambda_handler"
       Layers:
-        - !Ref LambdaLayer1
+        - !Ref PythonPackageLayer
       Runtime: python3.9
-      Timeout: 300
+      Timeout: 600
       Role: !GetAtt LambdaRole.Arn
-
 
   AutoAssignIpsRuleLambda:
     Type: "AWS::Lambda::Function"
@@ -431,7 +518,7 @@ Resources:
       Environment:
         Variables:
           region: !Ref AwsRegion
-          apikey: !Ref ApiKey
+          c1_api: !Ref ApiKeySecret
           sender: !Ref EmailSender
           recipients: !Ref EmailRecipients
           cloudoneregion: !Ref CloudOneRegion
@@ -439,6 +526,7 @@ Resources:
       Code:
         ZipFile: |
             import sys, warnings
+            import json
             from typing import List
             from pprint import pprint
             import boto3
@@ -452,23 +540,23 @@ Resources:
             from email.mime.text import MIMEText
             from email.mime.application import MIMEApplication
 
-            #### leave the following uncomment for Cloud Formation Template deployment.. followings are parameters that need to be input##
             API_VERSION = "v1"
             AWS_REGION = os.environ.get("region")
             SENDER = os.environ.get("sender")
             RECIPIENTS = os.environ.get("recipients")
-            API_KEY = os.environ.get("apikey")
             HOST = f"https://workload.{os.environ.get('cloudoneregion')}.cloudone.trendmicro.com/api"
+            C1_API_KEY = os.environ.get("c1_api")
             VULNERABILITY_REPORT_LAMBDA_FUNCTION = os.getenv("vulnerability_report_lambda_function_name")
 
 
-            def ds_config_and_version():
+            def ds_config_and_version(cloud_one_api_key):
                 # Setup
                 if not sys.warnoptions:
                     warnings.simplefilter("ignore")
+                API_VERSION = "v1"
                 conf = ds.Configuration()
                 conf.host = HOST
-                conf.api_key["Authorization"] = f"ApiKey {API_KEY}"
+                conf.api_key["Authorization"] = f"ApiKey {cloud_one_api_key}"
                 return conf, API_VERSION
 
 
@@ -519,7 +607,7 @@ Resources:
                 num_found = len(computers.computers)
 
                 if num_found == 0:
-                    raise Exception(f"No computers found for instance id: {instance_id}")
+                    print(f"No computers found for instance id: {instance_id}")
 
                 for computer in computers.computers:
                     return computer
@@ -552,7 +640,7 @@ Resources:
                 num_found = len(computers.computers)
 
                 if num_found == 0:
-                    raise Exception(f"No computers found for instance id: {instance_id}")
+                    print(f"No computers found for instance id: {instance_id}")
 
                 for computer in computers.computers:
                     # print('ips', computer.intrusion_prevention)
@@ -703,8 +791,13 @@ Resources:
 
 
             def lambda_handler(event, context):
+                # get secret
+                secrets = boto3.client('secretsmanager').get_secret_value(SecretId=C1_API_KEY)
+                sm_data = json.loads(secrets["SecretString"])
+                new_api_format = sm_data["ApiKey"]
+                conf, api_version = ds_config_and_version(new_api_format)
+
                 add_rules_output = dict()
-                conf, api_version = ds_config_and_version()
                 inspector = boto3.client("inspector2", region_name=AWS_REGION)
 
                 ips_rules = list_all_ips_rules(conf=conf, api_version=api_version)
@@ -790,7 +883,6 @@ Resources:
 
                     send_email(SENDER, RECIPIENTS.split(","), subject, body, body_html)
 
-                # trigger auto ips rule assign lambda and wait for it to complete
                 lambda_client = boto3.client('lambda')
                 lambda_payload = b''
                 lambda_client.invoke(FunctionName=VULNERABILITY_REPORT_LAMBDA_FUNCTION, 
@@ -799,15 +891,16 @@ Resources:
                 print('triggered vulnerability report lambda function')
 
             ######################################## Uncomment the following if you running on your local machine
-            # lambda_handler(None, None)
+            #lambda_handler(None, None)
+
 
 
       FunctionName: "AutoAssignIpsRuleLambda"
       Handler: "index.lambda_handler"
       Layers:
-        - !Ref LambdaLayer1
+        - !Ref PythonPackageLayer
       Runtime: python3.9
-      Timeout: 300
+      Timeout: 600
       Role: !GetAtt LambdaRole.Arn
 
   ScheduledRule: 
