@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: node-web-app
+  namespace: default
+spec:
+  containers:
+  - name: node-web-app
+    image: neuralegion/vulnerable-node-app@sha256:516b747dec633d90a3df7b2f03217526ca0894d37112a2c9a9be9a0153ddffa6
