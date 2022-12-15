@@ -429,7 +429,7 @@ Resources:
                 csv_file.seek(0)
 
                 # The subject line for the email.
-                subject = "Vulnrebility Report (CVEs) from Intrusion Prevention"
+                subject = "Vulnerability Report (CVEs) from Intrusion Prevention"
 
                 protected_instances_html = '<table border="1">' + "\n"
                 # write headers
