@@ -1,0 +1,45 @@
+title: "Cloud One Conformity Bot Access" 
+description: "Project level Custom Role for Cloud One Conformity access " 
+stage: "ALPHA" 
+
+includedPermissions: 
+- accessapproval.settings.get
+- apikeys.keys.list
+- bigquery.datasets.get
+- bigquery.tables.get
+- cloudkms.cryptoKeys.getIamPolicy 
+- cloudkms.cryptoKeys.list 
+- cloudkms.keyRings.list 
+- cloudkms.locations.list 
+- cloudsql.instances.list 
+- cloudsql.instances.listServerCas 
+- compute.backendServices.list 
+- compute.firewalls.list 
+- compute.globalForwardingRules.list 
+- compute.images.getIamPolicy 
+- compute.images.list 
+- compute.instances.list 
+- compute.networks.list 
+- compute.subnetworks.list 
+- compute.projects.get
+- compute.targetHttpsProxies.list
+- compute.targetSslProxies.list
+- compute.sslPolicies.list
+- compute.urlMaps.list
+- container.clusters.list 
+- dataproc.clusters.list
+- dns.policies.list
+- dns.managedZones.list
+- iam.serviceAccounts.get
+- iam.serviceAccounts.list
+- iam.serviceAccountKeys.list
+- logging.sinks.list 
+- logging.logMetrics.list
+- monitoring.alertPolicies.list
+- orgpolicy.policy.get
+- pubsub.topics.list 
+- resourcemanager.projects.get 
+- resourcemanager.projects.getIamPolicy 
+- serviceusage.services.list
+- storage.buckets.getIamPolicy 
+- storage.buckets.list 
