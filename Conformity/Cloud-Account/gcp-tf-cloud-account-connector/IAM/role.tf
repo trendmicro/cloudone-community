@@ -4,7 +4,6 @@ resource "google_project_iam_custom_role" "cloud_one_conformity_access" {
   role_id     = "CloudOneConformityAccess"
   title       = "Cloud One Conformity Access"
   description = "Project level Custom Role for Cloud One Conformity access"
-  stage       = "ALPHA"
   permissions = var.permissions
   
 }
