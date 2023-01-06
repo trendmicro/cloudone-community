@@ -7,10 +7,11 @@ do
     d) DEPLOYMENT_NAME=${OPTARG};;
     o) CLOUD_ONE_API_KEY=${OPTARG};;
     c) CLOUD_ONE_REGION=${OPTARG};;
+    *) echo "Invalid option: -${OPTARG}."
+       exit 1 ;;
   esac
 done
 
-GCP_PROJECT_ID=$(gcloud config list --format 'value(core.project)' 2> /dev/null)
 ORG_ID=$(gcloud organizations list --format 'value(ID)')
 PROJECT_LIST_ID=$(gcloud projects list --format="value(PROJECT_ID)")
 
@@ -24,25 +25,24 @@ done
 
 # Create a custom role containing the permissions below:
 echo "Deploying Cloud One Conformity Role..."
-gcloud iam roles create CloudOneConformityAccess --organization=$ORG_ID --file=cc-roles.yaml
-CONFORMITY_ROLE=$(gcloud iam roles list --filter=CloudOneConformityAccess --organization=$ORG_ID --format="value(NAME)")
+gcloud iam roles create CloudOneConformityAccess --organization="$ORG_ID" --file=cc-roles.yaml
+CONFORMITY_ROLE=$(gcloud iam roles list --filter=CloudOneConformityAccess --organization="$ORG_ID" --format="value(NAME)")
 echo "Conformity custom role created"
-echo $CONFORMITY_ROLE
+echo "$CONFORMITY_ROLE"
 
 # Create Cloud One Conformity Service Account
 echo "Deploying Cloud One Conformity Service Account..."
 gcloud iam service-accounts create cloud-one-conformity-bot --description="GCP service account for connecting Cloud One Conformity Bot to GCP" --display-name="Cloud One Conformity Bot"
 CONFORMITY_SA_EMAIL=$(gcloud iam service-accounts list --filter=cloud-one-conformity-bot --format="value(EMAIL)")
 echo "Conformity Service Account created"
-echo $CONFORMITY_SA_EMAIL
+echo "$CONFORMITY_SA_EMAIL"
 
 # Generate a Service Account JSON key
 echo "Generating JSON file..."
-gcloud iam service-accounts keys create Conformitykey.json --iam-account=$CONFORMITY_SA_EMAIL
+gcloud iam service-accounts keys create Conformitykey.json --iam-account="$CONFORMITY_SA_EMAIL"
 serviceAccountKeyJson=$(cat Conformitykey.json)
 
-CONFORMITY_SA_UID=$(gcloud iam service-accounts describe $CONFORMITY_SA_EMAIL --format 'value(uniqueId)')
-PROJECT_LIST_NAME=$(gcloud projects list --format='value(NAME)')
+CONFORMITY_SA_UID=$(gcloud iam service-accounts describe "$CONFORMITY_SA_EMAIL" --format 'value(uniqueId)')
 PROJECT_LIST_ID=$(gcloud projects list --format="value(PROJECT_ID)")
 
 echo "------------------------"
@@ -67,8 +67,8 @@ echo "Mapping Cloud One Conformity Service Account to accounts..."
 for project in $PROJECT_LIST_ID
 do
 echo "Adding Conformity Service Account to $project..."
-gcloud projects add-iam-policy-binding $project --member=serviceAccount:$CONFORMITY_SA_EMAIL --role=$CONFORMITY_ROLE
-PROJECT_NAME=$(gcloud projects list --filter=$project --format='value(NAME)')
+gcloud projects add-iam-policy-binding "$project" --member=serviceAccount:"$CONFORMITY_SA_EMAIL" --role="$CONFORMITY_ROLE"
+PROJECT_NAME=$(gcloud projects list --filter="$project" --format='value(NAME)')
 
 ACCOUNT_ID=$(wget -qO- --no-check-certificate \
   --method POST \
