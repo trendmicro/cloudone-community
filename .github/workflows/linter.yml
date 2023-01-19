@@ -26,7 +26,7 @@ jobs:
       - name: Run Linter
         run: |
           cfn-lint --version
-          cfn-lint -t ./**/*.yaml -i W E3012 E3005
+          cfn-lint -t ./**/*template.yaml -i W E3012 E3005
       - name: Lint Code Base
         uses: github/super-linter@v4
         env:
