@@ -22,8 +22,8 @@
     "typescript": "~3.7.2"
   },
   "dependencies": {
-    "@aws-cdk/aws-iam": "^1.47.1",
-    "@aws-cdk/core": "1.47.1",
+    "@aws-cdk/aws-iam": "^1.180.0",
+    "@aws-cdk/core": "1.180.0",
     "source-map-support": "^0.5.16"
   }
 }
