@@ -24,8 +24,10 @@ parser.add_argument("--c1region", required=True, type=str, help="Cloud One Accou
 parser.add_argument("--sqs", required=True, type=str, help="SQS URL")
 parser.add_argument("--scanner", required=True, type=str, help="Scanner Stack Name")
 parser.add_argument("--apikey", required=True, type=str, help="Cloud One API Key")
+parser.add_argument("--scanneralias", required=True, type=str, help="Scanner Lambda Alias ARN")
 args = parser.parse_args()
 
+Scan_Lambda_Arn_Alias = args.scanneralias
 scanner_stack_name = args.scanner
 aws_account_id = args.account
 cloud_one_region = args.c1region
@@ -198,6 +200,7 @@ def deploy_storage(kms_arn, region, bucket_name):
         "ParameterKey": "ScannerAWSAccount",
         "ParameterValue": aws_account_id,
     }
+    ScannerLambdaAliasARN = {"ParameterKey": "ScannerLambdaAliasARN", "ParameterValue": Scan_Lambda_Arn_Alias}
     S3_Encryption = {"ParameterKey": "KMSKeyARNForBucketSSE", "ParameterValue": kms_arn}
     cft_client = boto3.client("cloudformation", config=my_region_config)
 
@@ -214,6 +217,7 @@ def deploy_storage(kms_arn, region, bucket_name):
             Trigger_with_event,
             scanner_aws_account,
             S3_Encryption,
+            ScannerLambdaAliasARN,
         ],
         Capabilities=["CAPABILITY_IAM"],
     )
