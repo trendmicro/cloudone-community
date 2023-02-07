@@ -1,3 +1,5 @@
-my-bucket-exclusion-1
-another-exclude-bucket
-this-bucket-should-not-be-monitored
+fss-account-2-testing
+fss-account-2-testing-bravo
+prod-test-3-charlie
+test-another-bucket-1
+testing-another-bucket-3
