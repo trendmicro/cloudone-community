@@ -1,5 +1,3 @@
-fss-account-2-testing
-fss-account-2-testing-bravo
-prod-test-3-charlie
-test-another-bucket-1
-testing-another-bucket-3
+this-bucket-should-not-be-monitored
+also this-bucket-should-not-be-monitored
+and also this-bucket-should-not-be-monitored
