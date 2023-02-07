@@ -4,17 +4,21 @@ This script will deploy File Storage Security Stack to all buckets unless define
 **Before you deploy**
 
    * If not already present, [deploy a Scanner Stack](https://cloudone.trendmicro.com/docs/file-storage-security/stack-add-aws/) in the Cloud One - File Storage Security account.
-  * Obtain the Scanner Stack Name and SQS URL
+  * Obtain the Scanner Stack LambdaAlias ARN Value and SQS URL
       - Go to AWS Console > Services > CloudFormation
-      - Click **Name of Scanner Stack**
-         - Copy **Stack Name** 
-      - Under **Outputs** tab
-         - Copy **ScannerQueueURL**
-      - StackName: `Enter name for stack`
+      - Click on the **Name of your Scanner Stack**
+         - Select the **OutPuts Tab**
+         - Copy the name of your **Scanner Stack** 
+         - Copy the value of **ScannerLambdaAliasARN** 
+         - Copy the value of the **ScannerQueueURL**
+   
+   * **Obtain the AWS Account ID value in the AWS Account the Scanner Stack was deployed.**
+   
    * Obtain your Cloud One API Key
       - Generate API Key: [Cloud One API Key](https://cloudone.trendmicro.com/docs/account-and-user-management/c1-api-key/)
-   * Obtain your Cloud One Account ID/External ID
-      - Sign in to your Cloud One console > Subscription Management > Cloud One Account ID
+   * Obtain your Cloud One Region
+      - Sign in to your Cloud One console > Administration > Account Settings
+      -  Copy the value of the **Region**.
 
 <hr>
 
@@ -26,23 +30,34 @@ This script will deploy File Storage Security Stack to all buckets unless define
 ```
 
 **2. Create the Exclusions text file**
-   * Create a new file called `exclude.txt` with names of S3 buckets to exclude from FSS deployment.
+   * Create a new file called `exclude.txt` with names of S3 buckets to exclude from FSS deployment or run the command below to list buckets and write them all to a file called exclude.txt
+      - If you run the command below to create the exclusions file then you must remove the bucket names that you File Storage Security to be deployed on.
    - 1 per line, Example: [exclude.txt](https://github.com/trendmicro/cloudone-community/blob/main/File-Storage-Security/Deployment/python-deploy-to-all-existing/exclude.txt)
    * For organizations with a large number of buckets, a list of S3 buckets can be piped into exclude.txt using the aws cli and PowerShell:
+
+   
+  
+   [Mac/Linux]
    ```
-    aws s3 ls | Out-File -FilePath C:\<FILEPATH>\exclude.txt ; C:\<FILEPATH-AGAIN>\exclude.txt
+    aws s3 ls | awk '{print$3}' > exclude.txt
    ```
+   [Windows]
+   ```
+   #install awk with chocolatey
+    aws s3 ls | awk '{print$3}' > exclude.txt
+   ```
+
 **3. Run Script**
    - Open terminal/cmd:
    
    [Windows]
    ```
-      .\deploy.py --account <aws account id> --c1region <cloud one region; example: us-1> --scanner <Scanner Stack Name> --sqs <SQS URL> --apikey <CloudOne-API-Key>
+      .\deploy.py --account <AWS Account ID where scanner stack exists> --c1region <cloud one region; example: us-1> --scanner <Scanner Stack Name> --scanneralias <Scanner LambdaAlias ARN value> --sqs <Scanner Stack SQS URL> --apikey <CloudOne-API-Key>
    ```  
    
    [Mac/Linux]
    ```
-     python3 deploy.py --account <aws account id> --c1region <cloud one region; example: us-1> --scanner <Scanner Stack Name> --sqs <SQS URL> --apikey <CloudOne-API-Key>
+     python3 deploy.py --account <AWS Account ID where scanner stack exists> --c1region <cloud one region; example: us-1> --scanner <Scanner Stack Name> --scanneralias <Scanner LambdaAlias ARN value> --sqs <Scanner Stack SQS URL> --apikey <CloudOne-API-Key>
    ```
 
 
