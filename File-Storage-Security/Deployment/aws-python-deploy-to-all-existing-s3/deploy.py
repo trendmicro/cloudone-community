@@ -1,4 +1,4 @@
-from cgitb import reset
+#from cgitb import reset
 from http.client import responses
 import os.path
 import json
@@ -19,13 +19,15 @@ All storage stack will link to 1 Scanner Stack you define
 
 # variables needed
 parser = argparse.ArgumentParser(description='Deploy to All Buckets')
-parser.add_argument("--account", required=True, type=str, help="AWS Account id")
+parser.add_argument("--account", required=True, type=str, help="AWS Account ID where scanner stack exists")
 parser.add_argument("--c1region", required=True, type=str, help="Cloud One Account Region")
-parser.add_argument("--sqs", required=True, type=str, help="SQS URL")
+parser.add_argument("--sqs", required=True, type=str, help="Scanner Stack SQS URL Value")
 parser.add_argument("--scanner", required=True, type=str, help="Scanner Stack Name")
 parser.add_argument("--apikey", required=True, type=str, help="Cloud One API Key")
+parser.add_argument("--scanneralias", required=True, type=str, help="Scanner Lambda Alias ARN")
 args = parser.parse_args()
 
+Scan_Lambda_Arn_Alias = args.scanneralias
 scanner_stack_name = args.scanner
 aws_account_id = args.account
 cloud_one_region = args.c1region
@@ -119,6 +121,7 @@ def get_encryption_region(list_of_buckets):
                         break
                     elif tags["Key"] == "FSSMonitored" and tags["Value"].lower() == "yes":
                         print("S3: " + bucket_name + " FSS Tag Found!, FSS is already deployed!")
+                        #add logic to check s3 event notification
                         break
         # No tags at all on bucket                  
         except ClientError:
@@ -172,6 +175,7 @@ def deploy_storage(kms_arn, region, bucket_name):
         }
     )
     # gather cloud one ext id
+    
     r = http.request(
         "GET",
         stacks_api_url+"external-id",
@@ -185,6 +189,7 @@ def deploy_storage(kms_arn, region, bucket_name):
     except json.decoder.JSONDecodeError:
         time.sleep(1)
         ext_id = json.loads(r.data.decode("utf-8"))['externalID']
+    
     # set fss api doc parameters
     ExternalID = {"ParameterKey": "ExternalID", "ParameterValue": ext_id}
     CloudOneRegion = {"ParameterKey": "CloudOneRegion", "ParameterValue": cloud_one_region}
@@ -198,6 +203,7 @@ def deploy_storage(kms_arn, region, bucket_name):
         "ParameterKey": "ScannerAWSAccount",
         "ParameterValue": aws_account_id,
     }
+    ScannerLambdaAliasARN = {"ParameterKey": "ScannerLambdaAliasARN", "ParameterValue": Scan_Lambda_Arn_Alias}
     S3_Encryption = {"ParameterKey": "KMSKeyARNForBucketSSE", "ParameterValue": kms_arn}
     cft_client = boto3.client("cloudformation", config=my_region_config)
 
@@ -214,6 +220,7 @@ def deploy_storage(kms_arn, region, bucket_name):
             Trigger_with_event,
             scanner_aws_account,
             S3_Encryption,
+            ScannerLambdaAliasARN,
         ],
         Capabilities=["CAPABILITY_IAM"],
     )
@@ -230,7 +237,10 @@ def deploy_storage(kms_arn, region, bucket_name):
         time.sleep(1)
         id_resp = json.loads(id_call.data.decode('utf-8'))['stacks']
     for data in id_resp:
-        stack_id = data['stackID']
+        if 'name' in data and data['name'] is not None:
+            if scanner_stack_name == data['name']:
+                stack_id = data['stackID']
+
     add_to_cloudone(ws_api, stack_id, storage_stack)
 
 # call to cloudone to register stacks in FSS
