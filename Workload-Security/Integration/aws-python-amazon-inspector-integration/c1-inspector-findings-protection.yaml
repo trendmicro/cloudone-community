@@ -30,6 +30,10 @@ Parameters:
       - me-central-1
       - sa-east-1
 
+  LambdaLayerBucket:
+    Type: String
+    Description: Please enter your the name of your S3 bucket where you uploaded the DeepSecurityPackageLayer zip file
+    Default: vulnerabilitytestbucket
   ApiKey:
     Type: String
     NoEcho: "true"
@@ -65,7 +69,7 @@ Resources:
       CompatibleRuntimes:
         - python3.9
       Content:
-        S3Bucket: vulnerabilitytestbucket # Replace "vulnerabilitytestbucket" by the name of your bucket where you upload the zip file
+        S3Bucket: !Ref LambdaLayerBucket 
         S3Key: "DeepSecurityPackageLayer.zip" 
       LayerName: "DSlayer"
   LambdaRole: 
@@ -100,8 +104,9 @@ Resources:
           Action:
           - lambda:InvokeFunction
           - lambda:InvokeAsync
-          Resource: !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:*
-
+          Resource: 
+          - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:AutoAssignIpsRuleLambda
+          - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:vulnerability_report_lambda
   LambdaSESWritePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:

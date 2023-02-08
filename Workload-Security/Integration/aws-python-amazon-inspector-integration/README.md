@@ -12,6 +12,8 @@ Pre-Requisites
 
 . Generate the [API Key](https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/) from Cloud One
 
+. Create an s3 bucket or any bucket of your choice to upload the DeepSecurityPackageLayer zip file (DeepSecurityPackageLayer.zip)
+
 . For more information about cron expression [Click Here](https://www.designcise.com/web/tutorial/how-to-fix-parameter-scheduleexpression-is-not-valid-serverless-error)
 
 Background Information
