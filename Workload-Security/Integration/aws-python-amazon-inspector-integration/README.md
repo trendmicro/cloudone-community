@@ -18,7 +18,7 @@ Pre-Requisites
 
 Background Information
 
-Amazon Inspector is the assessment service which is for security issues and vulnerabilities to help improve the security and compliance in AWS environment. Inspector continuously scans your AWS workloads for vulnerabilities. AWS Inspector maintains a knowledge base of rules including two types of assessment, Network Based Type and Host Based Type. We are more interested in the Host Based Type which includes Common vulnerability exposures (CVEs).
+Amazon Inspector is the assessment service that is used to help improve the security compliance in AWS environment. Inspector continuously scans AWS workloads looking for vulnerabilities. AWS Inspector maintains a knowledge base of rules including two types of assessment, Network Based Type and Host Based Type. We are more interested in the Host Based Type which includes Common vulnerability exposures (CVEs).
 Trend Micro Cloud One Workload Security IPS rules protect against Common vulnerability exposures (CVEs). Each rule has a designated CVEs that it protects against.
 In this case Amazon Inspector is acting as IDS (Intrusion Detection Service) and Trend Micro Cloud One Workload Security is acting as IPS (Intrusion Protection Service).
 
@@ -33,6 +33,6 @@ In this project we have two lambda functions The first function (vulnerability r
 
 Deployment
 
-The CloudFormation Template “c1-inspector-findings-protection.yaml” will deploy both lambda functions. One will send out an email which contains a csv file which is a report (the list) of the vulnerabilities (CVEs) in the client AWS account that Cloud One Workload Security IPS rules are protecting against. The other one will assign the IPS rules we have in Workload Security to the appropriate instances on which Amazon Inspector found the vulnerabilities (CVEs). A report of the assigned rules will be sent out (the assignment configuration) in a designated email.
+The CloudFormation Template “c1-inspector-findings-protection.yaml” will deploy both lambda functions. One will send out an email which contains a csv file which is a report (the list) of the vulnerabilities (CVEs) in the client AWS account that Cloud One Workload Security IPS rules are protecting against. The other one will assign the IPS rules we have in Workload Security to the appropriate instances on which Amazon Inspector found the vulnerabilities (CVEs). A report of the assigned rules will be sent out (the assignment configuration) to a designated email.
 Both functions can be set up to run periodically according to the releasing of IPS rule weekly.
 Use cron configuration to schedule the run of your lambda functions. The default (cron(0 12 ? * WED *)) is every Wednesday.

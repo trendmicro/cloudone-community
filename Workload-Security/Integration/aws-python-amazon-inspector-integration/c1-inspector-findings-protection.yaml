@@ -163,7 +163,7 @@ Resources:
           - ses:SendBulkTemplatedEmail
           - ses:DeleteIdentity
           - ses:SetIdentityFeedbackForwardingEnabled
-          Resource: "*"
+          Resource: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailRecipients}
 
   LambdaSecretAcessPolicy: 
     Type: AWS::IAM::ManagedPolicy
