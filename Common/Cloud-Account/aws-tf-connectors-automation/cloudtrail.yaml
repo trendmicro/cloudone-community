@@ -1,0 +1,536 @@
+Transform: "AWS::Serverless-2016-10-31"
+Parameters:
+  ExistingCloudtrailBucketName:
+    Description:
+      Specify the name of an existing bucket that you want to use for forwarding
+      to Trend Micro Cloud One. If you do not specify a name, a default bucket
+      and CloudTrail resource will be created for you.
+    Type: String
+    Default: ""
+  ServiceToken:
+    Type: String
+    Default: ""
+  ServiceURL:
+    Type: String
+    Default: "https://cloudtrail.us-1.cloudone.trendmicro.com"
+  S3BucketName:
+    Type: String
+    Default: "cloud-trail-client-stack-template-prod-us-east-1"
+  APIVersion:
+    Type: String
+    Default: "v1"
+
+Conditions:
+  HasExistingCloudtrailBucketName:
+    !Not [!Equals ["", !Ref ExistingCloudtrailBucketName]]
+  HasNoExistingCloudtrailBucketName:
+    !Equals ["", !Ref ExistingCloudtrailBucketName]
+
+Resources:
+  # If the user has existing cloudtrail bucket, skipping this resource creation
+  S3BucketForLog:
+    Type: AWS::S3::Bucket
+    DependsOn: LambdaInvokePermission
+    Condition: HasNoExistingCloudtrailBucketName
+    Properties:
+      BucketName: !GetAtt NewS3BucketName.OutputString
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt SenderLambdaFunction.Arn
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SenderLambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !If [
+          HasNoExistingCloudtrailBucketName,
+          !Sub "arn:${AWS::Partition}:s3:::${NewS3BucketName.OutputString}", # Construct arn rather than reference logical name to avoid circular dependency
+          !Sub "arn:${AWS::Partition}:s3:::${ExistingCloudtrailBucketName}",
+        ]
+
+  # If the user has existing cloudtrail bucket, skipping this resource creation
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DependsOn: S3BucketForLog
+    Condition: HasNoExistingCloudtrailBucketName
+    Properties:
+      Bucket: !GetAtt NewS3BucketName.OutputString
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AWSCloudTrailAclCheck
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:GetBucketAcl
+            Resource: !Sub "arn:${AWS::Partition}:s3:::${NewS3BucketName.OutputString}"
+          - Sid: AWSCloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub arn:${AWS::Partition}:s3:::${NewS3BucketName.OutputString}/AWSLogs/${AWS::AccountId}/*
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-control
+          - Sid: AllowSSLRequestsOnly # AWS Foundational Security Best Practices v1.0.0 S3.5
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !Sub arn:${AWS::Partition}:s3:::${NewS3BucketName.OutputString}
+              - !Sub arn:${AWS::Partition}:s3:::${NewS3BucketName.OutputString}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+          - Sid: AWSLambdaWrite
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: s3:PutBucketNotification
+            Resource: !Sub "arn:${AWS::Partition}:s3:::${NewS3BucketName.OutputString}" # Construct arn rather than reference logical name to avoid circular dependency
+
+  # If the user has existing cloudtrail bucket, skipping this resource creation
+  CloudTrail:
+    Type: AWS::CloudTrail::Trail
+    Condition: HasNoExistingCloudtrailBucketName
+    DependsOn:
+      - SenderPolicy # Avoiding the SenderLambda be triggered without S3 access permission in the middle of stack deployment
+    Properties:
+      EnableLogFileValidation: true
+      EventSelectors:
+        - DataResources:
+            - Type: AWS::S3::Object
+              Values:
+                - !Sub "arn:${AWS::Partition}:s3:::"
+          IncludeManagementEvents: true
+          ReadWriteType: All
+      IsLogging: true
+      S3BucketName: !Ref S3BucketForLog
+      IsMultiRegionTrail: true
+      IncludeGlobalServiceEvents: true
+
+  AuthTokenSecretManager:
+    Type: AWS::SecretsManager::Secret
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Properties:
+      Description:
+        "The RSA private key PEM used by xdr-provision to verify JWT tokens for
+        request heartbeat in the ${{self:provider.stage}} environment."
+      SecretString: !Ref ServiceToken
+
+  AuthTokenRotationSchedule:
+    Type: AWS::SecretsManager::RotationSchedule
+    DependsOn: TokenRotatorLambdaPermission
+    Properties:
+      RotateImmediatelyOnUpdate: false
+      RotationLambdaARN: !GetAtt TokenRotatorLambda.Arn
+      RotationRules:
+        AutomaticallyAfterDays: 7
+        Duration: 1h
+      SecretId: !Ref AuthTokenSecretManager
+
+  TokenRotatorLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+                - "secretsmanager.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: /
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+
+  TokenRotatorLambdaPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: secretManagerRotateToken
+      Roles:
+        - !Ref TokenRotatorLambdaRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "secretsmanager:PutSecretValue"
+              - "secretsmanager:GetSecretValue"
+              - "secretsmanager:UpdateSecretVersionStage"
+            Resource: !Ref AuthTokenRotationSchedule
+
+  SenderLambdaIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: /
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+
+  SenderPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: readS3
+      Roles:
+        - !Ref SenderLambdaIAMRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "secretsmanager:GetSecretValue"
+            Resource: !Ref AuthTokenSecretManager
+          - Effect: Allow
+            Action:
+              - "s3:GetObject"
+            Resource:
+              !If [
+                HasNoExistingCloudtrailBucketName,
+                !Sub "arn:${AWS::Partition}:s3:::${S3BucketForLog}/*",
+                !Sub "arn:${AWS::Partition}:s3:::${ExistingCloudtrailBucketName}/*",
+              ]
+
+  StackLifecycleEventLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+
+  StackLifecycleEventLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: OperateAuthToken
+      Roles:
+        - !Ref StackLifecycleEventLambdaRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "secretsmanager:PutSecretValue"
+              - "secretsmanager:GetSecretValue"
+            Resource: !Ref AuthTokenSecretManager
+          - Effect: Allow
+            Action:
+              - "s3:PutBucketNotification"
+            Resource:
+              - !Sub arn:${AWS::Partition}:s3:::${ExistingCloudtrailBucketName}
+
+  HealthCheckerLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+
+  HealthCheckerLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: HealthCheckerPolicy
+      Roles:
+        - !Ref HealthCheckerLambdaRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          #          - Effect: Allow
+          #            Action:
+          #              - "cloudtrail:GetTrail"
+          #            Resource: !GetAtt CloudTrail.Arn
+          - Effect: Allow
+            Action:
+              - "s3:GetBucketNotification"
+            Resource:
+              !If [
+                HasNoExistingCloudtrailBucketName,
+                !GetAtt S3BucketForLog.Arn,
+                !Sub "arn:${AWS::Partition}:s3:::${ExistingCloudtrailBucketName}",
+              ]
+          - Effect: Allow
+            Action:
+              - "s3:ListAllMyBuckets"
+            Resource:
+              - "arn:aws:s3:::*"
+          - Effect: Allow
+            Action:
+              - "lambda:GetFunctionConfiguration"
+              - "lambda:UpdateFunctionConfiguration"
+            Resource: !GetAtt SenderLambdaFunction.Arn
+          - Effect: Allow
+            Action:
+              - "secretsmanager:GetSecretValue"
+            Resource: !Ref AuthTokenSecretManager
+
+  SenderLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main
+      Runtime: go1.x
+      PackageType: Zip
+      Environment:
+        Variables:
+          SERVICE_URL: !Ref ServiceURL
+          SECRET_ARN: !Ref AuthTokenSecretManager
+          API_VERSION: !Ref APIVersion
+          CLIENT_TEMPLATE_VERSION: "Private Preview"
+          MAXIMUM_S3_OBJECT_SIZE: "716800"
+          IS_FORWARDING_ENABLE: true
+      CodeUri:
+        Bucket: !Ref S3BucketName
+        Key: lambda/forwarder/main.zip
+      Role: !GetAtt SenderLambdaIAMRole.Arn
+      Timeout: 50
+
+  StackLifecycleEvent:
+    Type: Custom::StackLifecycleEvent
+    DependsOn: LambdaInvokePermission
+    Properties:
+      ServiceToken: !GetAtt StackLifecycleEventLambda.Arn
+      ExistingCloudtrailBucketName: !Ref ExistingCloudtrailBucketName
+      SenderLambdaFunctionArn: !GetAtt SenderLambdaFunction.Arn
+      CurrentPartition: !Sub ${AWS::Partition}
+
+  StackLifecycleEventLambda:
+    Type: AWS::Serverless::Function
+    DependsOn: StackLifecycleEventLambdaPolicy
+    Properties:
+      Handler: main
+      Runtime: go1.x
+      PackageType: Zip
+      Environment:
+        Variables:
+          SERVICE_URL: !Ref ServiceURL
+          SECRET_ARN: !Ref AuthTokenSecretManager
+      CodeUri:
+        Bucket: !Ref S3BucketName
+        Key: lambda/stacklifecycle/main.zip
+      Role: !GetAtt StackLifecycleEventLambdaRole.Arn
+      Timeout: 50
+
+  TokenRotatorLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main
+      Runtime: go1.x
+      PackageType: Zip
+      Environment:
+        Variables:
+          SERVICE_URL: !Ref ServiceURL
+      CodeUri:
+        Bucket: !Ref S3BucketName
+        Key: lambda/tokenrotator/main.zip
+      Role: !GetAtt TokenRotatorLambdaRole.Arn
+      Timeout: 50
+
+  TokenRotatorLambdaPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn: TokenRotatorLambda
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt TokenRotatorLambda.Arn
+      Principal: secretsmanager.amazonaws.com
+
+  HealthCheckerLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main
+      Runtime: go1.x
+      PackageType: Zip
+      Environment:
+        Variables:
+          # CLOUDTRAIL_NAME: !Ref CloudTrail
+          S3_BUCKET_NAME: !If [
+              HasNoExistingCloudtrailBucketName,
+              !Ref S3BucketForLog,
+              !Ref ExistingCloudtrailBucketName,
+            ] # Using existing cloudtrail bucket if there has one.
+          LAMBDA_ARN: !GetAtt SenderLambdaFunction.Arn
+          SECRET_ARN: !Ref AuthTokenSecretManager
+          SERVICE_URL: !Ref ServiceURL
+      CodeUri:
+        Bucket: !Ref S3BucketName
+        Key: lambda/healthchecker/main.zip
+      Role: !GetAtt HealthCheckerLambdaRole.Arn
+      Timeout: 120
+
+  HealthCheckerSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: rate(1 minute)
+      Targets:
+        - Arn: !GetAtt HealthCheckerLambda.Arn
+          Id: !Sub HealthCheckerSchedule-${AWS::StackName}
+
+  HealthCheckerLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt HealthCheckerLambda.Arn
+      Principal: events.amazonaws.com
+
+  SenderLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${SenderLambdaFunction}
+      RetentionInDays: 14
+
+  # Clean Up CloudTrail Bucket Before Deleting during Service Catalog Cleanup
+  CleanupBucketOnDelete:
+    Condition: HasNoExistingCloudtrailBucketName
+    Type: Custom::cleanupBucket
+    Properties:
+      ServiceToken: !GetAtt "CleanBucketFunction.Arn"
+      BucketName: !Ref S3BucketForLog
+
+  CleanBucketFunction:
+    Type: AWS::Lambda::Function
+    Condition: HasNoExistingCloudtrailBucketName
+    Properties:
+      Description: Cleans out Bucket during delete
+      Handler: index.handler
+      Runtime: python3.8
+      Role: !GetAtt "CleanBucketRole.Arn"
+      Timeout: 900
+
+      Code:
+        ZipFile: |
+          import cfnresponse
+          import logging
+          import boto3
+          import time
+          status = cfnresponse.SUCCESS
+          logger = logging.getLogger(__name__)
+          logging.basicConfig(format='%(asctime)s %(message)s',level=logging.DEBUG)
+          def handler(event, context):
+              logger.debug(event)
+              if event['RequestType'] == 'Delete':
+                BUCKETNAME = event['ResourceProperties']['BucketName']
+                s3 = boto3.resource('s3')
+                time.sleep(240)
+                bucket = s3.Bucket(BUCKETNAME)
+                bucket_versioning = s3.BucketVersioning(BUCKETNAME)
+                if bucket_versioning.status == 'Enabled':
+                  bucket.object_versions.delete()
+                else:
+                  bucket.objects.all().delete()
+                cfnresponse.send(event, context, status, {}, None)
+              else:
+                cfnresponse.send(event, context, status, {}, None)
+  CleanBucketRole:
+    Type: AWS::IAM::Role
+    Condition: HasNoExistingCloudtrailBucketName
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: lambda-bucketcleaner
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:DeleteObjectVersion
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${S3BucketForLog}/*"
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetBucketVersioning
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${S3BucketForLog}"
+
+  #***LowerCaseS3BucketName***
+  # Custom resource to transform input to lowercase.
+  LowerCaseLambda:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: Returns the lowercase version of a string
+      MemorySize: 256
+      Runtime: python3.8
+      Handler: index.lambda_handler
+      Role: !GetAtt LowerCaseLambdaRole.Arn
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import cfnresponse
+
+          def lambda_handler(event, context):                                                    
+              output = event['ResourceProperties'].get('InputString', '').lower()                
+              responseData = {'OutputString': output}                                            
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+
+  LowerCaseLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "lambda-write-logs"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "arn:aws:logs:*:*"
+
+  NewS3BucketName:
+    Type: Custom::Lowercase
+    Properties:
+      ServiceToken: !GetAtt LowerCaseLambda.Arn
+      InputString: !Sub ${AWS::AccountId}-${AWS::Region}-cloud-one-cloudtrail-bucket
+  #***LowerCaseS3BucketName***
