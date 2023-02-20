@@ -1,4 +1,4 @@
-[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1-inspector-findings-protection&templateURL=https://vulnerabilitytestbucket.s3.amazonaws.com/c1-inspector-findings-protection.yaml)
+[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1-inspector-findings-protection&templateURL=https://vulnerabilitytestbucket.s3.amazonaws.com/c1ws-inspector-findings-template.yaml)
 
 
 Amazon Inspector integration with Cloud One Workload Security
@@ -33,6 +33,6 @@ In this project we have two lambda functions The first function (vulnerability r
 
 Deployment
 
-The CloudFormation Template “c1-inspector-findings-protection.yaml” will deploy both lambda functions. One will send out an email which contains a csv file which is a report (the list) of the vulnerabilities (CVEs) in the client AWS account that Cloud One Workload Security IPS rules are protecting against. The other one will assign the IPS rules we have in Workload Security to the appropriate instances on which Amazon Inspector found the vulnerabilities (CVEs). A report of the assigned rules will be sent out (the assignment configuration) to a designated email.
+The CloudFormation Template “c1ws-inspector-findings-template.yaml” will deploy both lambda functions. One will send out an email which contains a csv file which is a report (the list) of the vulnerabilities (CVEs) in the client AWS account that Cloud One Workload Security IPS rules are protecting against. The other one will assign the IPS rules we have in Workload Security to the appropriate instances on which Amazon Inspector found the vulnerabilities (CVEs). A report of the assigned rules will be sent out (the assignment configuration) to a designated email.
 Both functions can be set up to run periodically according to the releasing of IPS rule weekly.
 Use cron configuration to schedule the run of your lambda functions. The default (cron(0 12 ? * WED *)) is every Wednesday.
