@@ -138,6 +138,10 @@ Resources:
             - sa-east-1
             DeploymentTargets:
               OrganizationalUnitIds: !Ref DeploymentTargets
+      OperationPreferences:
+          FailureTolerancePercentage: 0
+          MaxConcurrentPercentage: 100
+          RegionConcurrencyType: PARALLEL
       StackSetName: C1WS-SSM-StackSet
       TemplateBody: |
         Parameters:
@@ -227,4 +231,3 @@ Resources:
                 - Key: !Ref TargetKey
                   Values:
                   - !Ref TargetValues
-
