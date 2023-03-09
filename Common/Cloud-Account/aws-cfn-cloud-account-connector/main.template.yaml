@@ -94,7 +94,6 @@ Resources:
       Parameters:
         CloudOneRegion: !Ref CloudOneRegion
         CloudOneAccountID: !Ref CloudOneAccountID
-        CloudOneOIDCProviderURL: "cloudaccounts.us-1.cloudone.trendmicro.com"
       TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/cloudone.template.yaml'
 
   CloudTrailStack:
