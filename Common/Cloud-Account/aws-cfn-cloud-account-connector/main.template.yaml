@@ -10,6 +10,8 @@ Metadata:
       - CloudOneAccountID
       - CloudOneApiKey
       - CloudOneRegion
+      - VisionOneServiceToken
+      - ExistingCloudtrailBucketName
     - Label:
         default: 'Warning: Do not modify the fields below unless you know what you
          are doing. Modifications may cause your deployment to fail.'
@@ -23,6 +25,8 @@ Metadata:
         default: CloudOneApiKey
       CloudOneRegion:
         default: CloudOneRegion
+      VisionOneServiceToken:
+        default: VisionOneServiceToken
     
 
 Parameters:
@@ -46,6 +50,13 @@ Parameters:
        - jp-1
        - ca-1
        - de-1
+  VisionOneServiceToken:
+    Description: Vision One Service Token. You can find it at...
+    Type: String
+  ExistingCloudtrailBucketName:
+    Description: Specify the name of an existing bucket that you want to use for forwarding
+      to Trend Micro Cloud One.
+    Type: String
   QSS3BucketName:
     AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
@@ -85,4 +96,12 @@ Resources:
         CloudOneAccountID: !Ref CloudOneAccountID
         CloudOneOIDCProviderURL: "cloudaccounts.us-1.cloudone.trendmicro.com"
       TemplateURL: https://cloud-one-cloud-accounts-us-east-1.s3.us-east-1.amazonaws.com/templates/aws/cloud-account-management-role.template
+
+  CloudTrailStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        ExistingCloudtrailBucketName: !Ref ExistingCloudtrailBucketName
+        ServiceToken: !Ref VisionOneServiceToken
+      TemplateURL: https://cloud-trail-client-stack-template-prod-us-east-2.s3.amazonaws.com/ClientSetup.yaml
 
