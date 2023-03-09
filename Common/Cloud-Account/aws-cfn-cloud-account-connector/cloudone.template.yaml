@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Trend Cloud One Workload Security Integration.
+
+Parameters:
+  CloudOneAccountID:
+    Description: Cloud One Account Id. You can find it at...
+    Type: String
+  CloudOneRegion:
+    Description: Cloud One Region
+    Type: String
+    Default: us-1
+    AllowedValues:
+       - us-1
+       - trend-us-1
+       - au-1
+       - ie-1
+       - sg-1
+       - in-1
+       - jp-1
+       - ca-1
+       - de-1
+  
+
+Resources:
+  CloudOneIntegrationStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CloudOneRegion: !Ref CloudOneRegion
+        CloudOneAccountID: !Ref CloudOneAccountID
+        CloudOneOIDCProviderURL: "cloudaccounts.us-1.cloudone.trendmicro.com"
+      TemplateURL: https://cloud-one-cloud-accounts-us-east-1.s3.us-east-1.amazonaws.com/templates/aws/cloud-account-management-role.template
+
+  AddAWSAccountToCloudOneFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.8
+      Timeout: 60
+      Handler: index.lambda_handler
+      Role: !GetAtt AddAWSAccountToCloudOneFunctionRole.Arn
+      Environment:
+        Variables:
+          - CloudOneRoleArn: !GetAtt CloudOneIntegrationStack.Outputs.CloudOneRoleArn
+      Code:
+        ZipFile:
+          !Sub
+            |-
+              import json
+              import urllib3
+              import boto3
+              import cfnresponse
+
+              def lambda_handler(event, context):
+                  status = cfnresponse.SUCCESS
+                  response_data = {}
+                  physicalResourceId = None
+                  try:
+                      
+                      if event["RequestType"] == "Create" or event["RequestType"] == "Update":
+                        cloudOneRoleArn = os.environ['CloudOneRoleArn']
+
+                        url = 'https://cloudaccounts.'+cloudOneRegion+'.cloudone.trendmicro.com/api/cloudaccounts/aws'
+
+                        payload = json.dumps({
+                          'roleARN': cloudOneRoleArn
+                        })
+                        headers = {
+                          'api-version': 'v1',
+                          'Authorization': 'ApiKey '+cloudOneApiKey+'',
+                          'Content-Type': 'application/json'
+                        }
+
+                        http = urllib3.PoolManager()
+                        encoded_payload = payload.encode("utf-8")
+                        print(headers)
+                        print (url)
+                        response = http.request("GET", url=url, headers=headers, body=encoded_payload)
+                        response_json_data = json.loads(response.data.decode("utf-8"))
+                        print(response_json_data["id"])
+                        physicalResourceId = response_json_data["id"] 
+                        response_data = {"ID": response_json_data["id"]}
+
+                      else: # if event["RequestType"] == "Delete":
+                        physicalResourceId = event["PhysicalResourceId"]
+
+                  except Exception as e:
+                    print(e)
+                    status = cfnresponse.FAILED
+                  
+                  cfnresponse.send(event, context, status, response_data, physicalResourceId)
+
+  AddAWSAccountToCloudOne:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AddAWSAccountToCloudOneFunction.Arn
+
+  AddAWSAccountToCloudOneFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  

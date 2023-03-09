@@ -95,7 +95,7 @@ Resources:
         CloudOneRegion: !Ref CloudOneRegion
         CloudOneAccountID: !Ref CloudOneAccountID
         CloudOneOIDCProviderURL: "cloudaccounts.us-1.cloudone.trendmicro.com"
-      TemplateURL: https://cloud-one-cloud-accounts-us-east-1.s3.us-east-1.amazonaws.com/templates/aws/cloud-account-management-role.template
+      TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/cloudone.template.yaml'
 
   CloudTrailStack:
     Type: AWS::CloudFormation::Stack
@@ -104,4 +104,6 @@ Resources:
         ExistingCloudtrailBucketName: !Ref ExistingCloudtrailBucketName
         ServiceToken: !Ref VisionOneServiceToken
       TemplateURL: https://cloud-trail-client-stack-template-prod-us-east-2.s3.amazonaws.com/ClientSetup.yaml
+    DependsOn:
+      - CloudOneIntegrationStack
 

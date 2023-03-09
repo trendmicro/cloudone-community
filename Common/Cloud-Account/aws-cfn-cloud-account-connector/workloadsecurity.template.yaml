@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: C1WS Role
+Description: Trend Cloud One Workload Security Integration.
 
 Parameters:
   CloudOneApiKey:
