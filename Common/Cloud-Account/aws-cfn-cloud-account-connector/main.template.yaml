@@ -80,6 +80,15 @@ Parameters:
   
 
 Resources:
+  VisionOneEnrollmentStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CloudOneApiKey: !Ref CloudOneApiKey
+        CloudOneRegion: !Ref CloudOneRegion
+        VisionOneServiceToken: !Ref VisionOneServiceToken
+      TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/vision-one-enrollment.template.yaml'
+
   WorkloadSecurityIntegrationStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -87,6 +96,8 @@ Resources:
         CloudOneApiKey: !Ref CloudOneApiKey
         CloudOneRegion: !Ref CloudOneRegion
       TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/workloadsecurity.template.yaml'
+    DependsOn:
+      - VisionOneEnrollmentStack
 
   CloudOneIntegrationStack:
     Type: AWS::CloudFormation::Stack
@@ -96,6 +107,8 @@ Resources:
         CloudOneAccountID: !Ref CloudOneAccountID
         CloudOneApiKey: !Ref CloudOneApiKey
       TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/cloudone.template.yaml'
+    DependsOn:
+      - VisionOneEnrollmentStack
 
   CloudTrailStack:
     Type: AWS::CloudFormation::Stack
