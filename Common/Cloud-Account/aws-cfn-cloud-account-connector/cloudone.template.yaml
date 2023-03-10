@@ -5,6 +5,9 @@ Parameters:
   CloudOneAccountID:
     Description: Cloud One Account Id. You can find it at...
     Type: String
+  CloudOneApiKey:
+    Description: Cloud One API Key. You can find it at...
+    Type: String
   CloudOneRegion:
     Description: Cloud One Region
     Type: String
@@ -41,6 +44,8 @@ Resources:
       Environment:
         Variables:
           CloudOneRoleArn: !GetAtt CloudOneIntegrationStack.Outputs.CloudOneRoleArn
+          CloudOneRegion: !Ref CloudOneRegion
+          CloudOneApiKey: !Ref CloudOneApiKey
       Code:
         ZipFile:
           !Sub
@@ -59,6 +64,8 @@ Resources:
                       
                       if event["RequestType"] == "Create" or event["RequestType"] == "Update":
                         cloudOneRoleArn = os.environ['CloudOneRoleArn']
+                        cloudOneRegion = os.environ['CloudOneRegion']
+                        cloudOneApiKey = os.environ['CloudOneApiKey']
 
                         url = 'https://cloudaccounts.'+cloudOneRegion+'.cloudone.trendmicro.com/api/cloudaccounts/aws'
 

@@ -94,6 +94,7 @@ Resources:
       Parameters:
         CloudOneRegion: !Ref CloudOneRegion
         CloudOneAccountID: !Ref CloudOneAccountID
+        CloudOneApiKey: !Ref CloudOneApiKey
       TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/cloudone.template.yaml'
 
   CloudTrailStack:
