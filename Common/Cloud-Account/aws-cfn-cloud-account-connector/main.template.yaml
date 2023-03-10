@@ -97,8 +97,9 @@ Resources:
     Properties:
       Parameters:
         ExistingCloudtrailBucketName: !Ref ExistingCloudtrailBucketName
-        ServiceToken: !Ref VisionOneServiceToken
-      TemplateURL: https://cloud-trail-client-stack-template-prod-us-east-2.s3.amazonaws.com/ClientSetup.yaml
+        CloudOneRegion: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneRegion
+        CloudOneApiKey: !Ref CloudOneApiKey
+      TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/cloudtrail.template.yaml'
     DependsOn:
       - CloudOneIntegrationStack
 
