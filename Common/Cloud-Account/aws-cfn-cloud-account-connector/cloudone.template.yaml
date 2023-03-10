@@ -82,7 +82,7 @@ Resources:
                         encoded_payload = payload.encode("utf-8")
                         print(headers)
                         print(url)
-                        response = http.request("GET", url=url, headers=headers, body=encoded_payload)
+                        response = http.request("POST", url=url, headers=headers, body=encoded_payload)
                         print(response)
                         response_json_data = json.loads(response.data.decode("utf-8"))
                         print(response_json_data)
