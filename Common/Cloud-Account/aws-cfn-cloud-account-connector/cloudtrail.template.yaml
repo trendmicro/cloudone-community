@@ -47,6 +47,7 @@ Resources:
               import cfnresponse
               import re
               import uuid
+              from urllib.parse import unquote
 
               def lambda_handler(event, context):
                   status = cfnresponse.SUCCESS
@@ -95,7 +96,7 @@ Resources:
                           "S3BucketKey": s3BucketKey,
                           "S3BucketName": s3BucketName,
                           "ServiceToken": serviceToken,
-                          "ServiceUrl": serviceUrl,
+                          "ServiceUrl": unquote(serviceUrl),
                           "ApiVersion": apiVersion
                         }
 
