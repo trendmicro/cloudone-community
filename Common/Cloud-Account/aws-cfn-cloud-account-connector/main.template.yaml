@@ -7,9 +7,7 @@ Metadata:
     - Label:
         default: 'Please adjust the fields below as required for deployment.'
       Parameters:
-      - CloudOneAccountID
       - CloudOneApiKey
-      - CloudOneRegion
       - VisionOneServiceToken
       - ExistingCloudtrailBucketName
     - Label:
@@ -19,37 +17,16 @@ Metadata:
       - QSS3BucketName
       - QSS3KeyPrefix
     ParameterLabels:
-      CloudOneAccountID:
-        default: CloudOneAccountID
       CloudOneApiKey:
         default: CloudOneApiKey
-      CloudOneRegion:
-        default: CloudOneRegion
       VisionOneServiceToken:
         default: VisionOneServiceToken
     
 
 Parameters:
-  CloudOneAccountID:
-    Description: Cloud One Account Id. You can find it at...
-    Type: String
   CloudOneApiKey:
     Description: Cloud One API Key. You can find it at...
     Type: String
-  CloudOneRegion:
-    Description: Cloud One Region. You can find it at...
-    Type: String
-    Default: us-1
-    AllowedValues:
-       - us-1
-       - trend-us-1
-       - au-1
-       - ie-1
-       - sg-1
-       - in-1
-       - jp-1
-       - ca-1
-       - de-1
   VisionOneServiceToken:
     Description: Vision One Service Token. You can find it at...
     Type: String
@@ -76,16 +53,21 @@ Parameters:
       can include numbers, lowercase letters, uppercase letters, hyphens (-), dots(.) and
       forward slash (/).
     Type: String
-  
-  
 
 Resources:
+  GetCloudOneRegionAndAccountStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CloudOneApiKey: !Ref CloudOneApiKey
+      TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/get-cloudone-region-and-account.yaml'
+
   VisionOneEnrollmentStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
         CloudOneApiKey: !Ref CloudOneApiKey
-        CloudOneRegion: !Ref CloudOneRegion
+        CloudOneRegion: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneRegion
         VisionOneServiceToken: !Ref VisionOneServiceToken
       TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/vision-one-enrollment.template.yaml'
 
@@ -94,7 +76,7 @@ Resources:
     Properties:
       Parameters:
         CloudOneApiKey: !Ref CloudOneApiKey
-        CloudOneRegion: !Ref CloudOneRegion
+        CloudOneRegion: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneRegion
       TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/workloadsecurity.template.yaml'
     DependsOn:
       - VisionOneEnrollmentStack
@@ -103,8 +85,8 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        CloudOneRegion: !Ref CloudOneRegion
-        CloudOneAccountID: !Ref CloudOneAccountID
+        CloudOneRegion: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneRegion
+        CloudOneAccountID: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneRegion
         CloudOneApiKey: !Ref CloudOneApiKey
       TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/cloudone.template.yaml'
     DependsOn:
