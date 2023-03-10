@@ -44,8 +44,9 @@ Resources:
               import json
               import os
               import urllib3
-              import boto3
               import cfnresponse
+              import re
+              import uuid
 
               def lambda_handler(event, context):
                   status = cfnresponse.SUCCESS
@@ -56,6 +57,8 @@ Resources:
                       if event["RequestType"] == "Create" or event["RequestType"] == "Update":
                         cloudOneRegion = os.environ['CloudOneRegion']
                         cloudOneApiKey = os.environ['CloudOneApiKey']
+                        awsAccountId = os.environ['AwsAccountId']
+                        awsRegion = os.environ['AwsRegion']
 
                         url = 'https://cloudtrail.'+cloudOneRegion+'.cloudone.trendmicro.com/api/stacks'
 
@@ -78,14 +81,15 @@ Resources:
                         response_json_data = json.loads(response.data.decode("utf-8"))
                         print(response_json_data)
                         encodedDeploymentUrl = response_json_data["deploymentURL"]
-                        templateUrl = re.search(r"templateUrl=([^&]+)", url).group(1)
-                        s3BucketKey = re.search(r"param_S3BucketKey=([^&]+)", url).group(1)
-                        s3BucketName = re.search(r"param_S3BucketName=([^&]+)", url).group(1)
-                        serviceToken = re.search(r"param_ServiceToken=([^&]+)", url).group(1)
-                        serviceUrl = re.search(r"param_ServiceURL=([^&]+)", url).group(1)
-                        apiVersion = re.search(r"param_APIVersion=([.]+)", url).group(1)
+                        print(encodedDeploymentUrl)
+                        templateUrl = re.search(r"templateUrl=([^&]+)", encodedDeploymentUrl).group(1)
+                        s3BucketKey = re.search(r"param_S3BucketKey=([^&]+)", encodedDeploymentUrl).group(1)
+                        s3BucketName = re.search(r"param_S3BucketName=([^&]+)", encodedDeploymentUrl).group(1)
+                        serviceToken = re.search(r"param_ServiceToken=([^&]+)", encodedDeploymentUrl).group(1)
+                        serviceUrl = re.search(r"param_ServiceURL=([^&]+)", encodedDeploymentUrl).group(1)
+                        apiVersion = re.search(r"param_APIVersion=([^\n]+)", encodedDeploymentUrl).group(1)
 
-                        physicalResourceId = serviceToken 
+                        physicalResourceId = str(uuid.uuid4())
                         response_data = {
                           "TemplateUrl": templateUrl,
                           "S3BucketKey": s3BucketKey,
