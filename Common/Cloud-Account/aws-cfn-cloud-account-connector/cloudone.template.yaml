@@ -46,6 +46,7 @@ Resources:
           !Sub
             |-
               import json
+              import os
               import urllib3
               import boto3
               import cfnresponse
