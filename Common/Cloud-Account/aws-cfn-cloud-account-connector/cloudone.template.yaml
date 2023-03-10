@@ -40,7 +40,7 @@ Resources:
       Role: !GetAtt AddAWSAccountToCloudOneFunctionRole.Arn
       Environment:
         Variables:
-          - CloudOneRoleArn: !GetAtt CloudOneIntegrationStack.Outputs.CloudOneRoleArn
+          CloudOneRoleArn: !GetAtt CloudOneIntegrationStack.Outputs.CloudOneRoleArn
       Code:
         ZipFile:
           !Sub
