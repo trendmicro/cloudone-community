@@ -1,0 +1,279 @@
+AWSTemplateFormatVersion : 2010-09-09
+Parameters:
+  BucketName:
+    Type: String
+    Description: Please enter a unique bucket name
+  # ShouldCreateBucketInputParameter:
+  #   Type: String
+  #   AllowedValues:
+  #     - 'true'
+  #     - 'false'
+  #   Description: >-
+  #     If true then the S3 bucket that will be proxied will be created with the
+  #     CloudFormation stack.
+  AwsRegion:
+    Type: String
+    Description: Please enter the region in which the lambda will be executed
+    Default : us-east-1
+    AllowedValues:
+      - us-east-1
+      - us-east-2	
+      - us-east-1	
+      - us-west-1	
+      - us-west-2
+      - af-south-1
+      - ap-east-1
+      - ap-southeast-3
+      - ap-south-1
+      - ap-northeast-3
+      - ap-northeast-2
+      - ap-southeast-1
+      - ap-southeast-2
+      - ap-northeast-1
+      - ca-central-1
+      - eu-central-1
+      - eu-west-1
+      - eu-west-2
+      - eu-south-1
+      - eu-west-3
+      - eu-north-1
+      - me-south-1
+      - me-central-1
+      - sa-east-1
+  CloudOneRegion:
+    Type: String
+    Description: Enter your Cloud One Region
+    Default: us-1
+    AllowedValues:
+      - trend-us-1
+      - us-1
+      - in-1
+      - gb-1
+      - jp-1
+      - de-1
+      - au-1
+      - ca-1
+      - sg-1
+  ApiKey:
+    Type: String
+    NoEcho: "true"
+    Description: Please enter your Cloud One API Key
+  EmailSender:
+    Type: String
+    Description: Email address to be used for sending report
+  EmailRecipients:
+    Type: String
+    Description: Comma separated (without spaces) email addresses for recieving report
+  ActionSet:
+    Type: String
+    Description: Choose the recommended ActionSet you would like apply to the Intrusion Prevention Filtering
+    AllowedValues:
+      - Block
+      - Permit
+      - Trust
+    Default: Block
+  ProfileName:
+    Type: String
+    Default: Default-Profile
+    Description: Profile name for Appliances
+
+# Conditions:
+#   CreateS3Bucket: !Equals 
+#     - !Ref ShouldCreateBucketInputParameter
+#     - 'true'
+
+Mappings: 
+  ActionToFlowControl:
+    key:
+      Block: "Block + Notify"
+      Permit: "Permit + Notify"
+      Trust: "Trust"
+
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    # Condition: CreateS3Bucket
+    DeletionPolicy: Retain
+    DependsOn:
+      - ProcessingLambdaPermission
+    Properties:
+      BucketName: !Ref BucketName
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:Put
+            Function: !GetAtt ProcessingLambdaFunction.Arn
+            Filter:
+              S3Key:
+                Rules:
+                - Name: suffix
+                  Value: .csv
+  # SerialNumberBucketResource:
+  #   Type: 'AWS::S3::Bucket'
+  #   Condition: CreateS3Bucket
+  #   DeletionPolicy: Retain
+  #   DependsOn:
+  #     - ProcessingLambdaPermission
+  #   Properties:
+  #     BucketName: !Ref BucketName
+  #     NotificationConfiguration:
+  #       LambdaConfigurations:
+  #         - Event: s3:ObjectCreated:Put
+  #           Function: !GetAtt ProcessingLambdaFunction.Arn
+  #           Filter:
+  #             S3Key:
+  #               Rules:
+  #               - Name: suffix
+  #                 Value: .csv
+
+  ProcessingLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref ProcessingLambdaFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub 'arn:aws:s3:::${BucketName}'
+      SourceAccount: !Ref AWS::AccountId
+
+  ProcessingLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+        - PolicyName: allowLogging
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - logs:*
+              Resource: arn:aws:logs:*:*:*
+        - PolicyName: getAndDeleteObjects
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - s3:GetObject
+              - s3:DeleteObject
+              Resource:  !Sub 'arn:aws:s3:::${BucketName}/*'  
+      ManagedPolicyArns:
+        - !Ref LambdaSESWritePolicy
+        - !Ref LambdaSecretAcessPolicy
+
+  LambdaSESWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - ses:CreateReceiptRule
+          - ses:UpdateConfigurationSetEventDestination
+          - ses:SetIdentityMailFromDomain
+          - ses:DeleteReceiptFilter
+          - ses:VerifyEmailIdentity
+          - ses:DeleteCustomVerificationEmailTemplate
+          - ses:TestRenderTemplate
+          - ses:CreateReceiptFilter
+          - ses:DeleteReceiptRule
+          - ses:DeleteConfigurationSet
+          - ses:CreateConfigurationSetTrackingOptions
+          - ses:UpdateAccountSendingEnabled
+          - ses:DeleteConfigurationSetEventDestination
+          - ses:VerifyDomainDkim
+          - ses:DeleteVerifiedEmailAddress
+          - ses:VerifyDomainIdentity
+          - ses:CloneReceiptRuleSet
+          - ses:SetIdentityHeadersInNotificationsEnabled
+          - ses:SendEmail
+          - ses:SendTemplatedEmail
+          - ses:SendCustomVerificationEmail
+          - ses:UpdateTemplate
+          - ses:DeleteConfigurationSetTrackingOptions
+          - ses:UpdateConfigurationSetTrackingOptions
+          - ses:SetIdentityNotificationTopic
+          - ses:SetIdentityDkimEnabled
+          - ses:PutConfigurationSetDeliveryOptions
+          - ses:VerifyEmailAddress
+          - ses:UpdateReceiptRule
+          - ses:CreateConfigurationSet
+          - ses:UpdateConfigurationSetReputationMetricsEnabled
+          - ses:DeleteReceiptRuleSet
+          - ses:CreateTemplate
+          - ses:SendRawEmail
+          - ses:ReorderReceiptRuleSet
+          - ses:SendBounce
+          - ses:UpdateConfigurationSetSendingEnabled
+          - ses:SetActiveReceiptRuleSet
+          - ses:CreateCustomVerificationEmailTemplate
+          - ses:UpdateCustomVerificationEmailTemplate
+          - ses:DeleteTemplate
+          - ses:CreateReceiptRuleSet
+          - ses:SetReceiptRulePosition
+          - ses:CreateConfigurationSetEventDestination
+          - ses:SendBulkTemplatedEmail
+          - ses:DeleteIdentity
+          - ses:SetIdentityFeedbackForwardingEnabled
+          Resource: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailRecipients}
+
+  LambdaSecretAcessPolicy: 
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - "secretsmanager:GetSecretValue"
+          - "secretsmanager:DescribeSecret"
+          - "sts:AssumeRole"
+          Resource: !Ref ApiKeySecret
+
+  #   This secret holds the Trend Micro Cloud One API key.
+  ApiKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: "TrendMicro/CloudOne/ApiKey"
+      SecretString: !Sub |
+        {
+          "ApiKey": "${ApiKey}"
+        }
+
+  ProcessingLambdaFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Environment:
+        Variables:
+          region: !Ref AwsRegion
+          c1_api: !Ref ApiKeySecret
+          sender: !Ref EmailSender
+          recipients: !Ref EmailRecipients
+          cloudoneregion: !Ref CloudOneRegion
+          actionset: !FindInMap [ActionToFlowControl, key, !Ref ActionSet]
+          profilename: !Ref ProfileName
+      Code:
+        S3Bucket: cloudone-community
+        S3Key: c1ns-policy-update-s3-cves.py.zip
+
+      Handler: index.lambda_handler
+      Layers:
+        - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:336392948345:layer:AWSSDKPandas-Python38:4 
+      Runtime: python3.8
+      MemorySize: 256
+      Timeout: 300
+      Description: Updating Network Security Policy
+      Role: !GetAtt ProcessingLambdaExecutionRole.Arn
+
+
+
