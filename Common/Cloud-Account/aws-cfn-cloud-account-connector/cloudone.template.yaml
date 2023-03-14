@@ -32,7 +32,7 @@ Resources:
         CloudOneRegion: !Ref CloudOneRegion
         CloudOneAccountID: !Ref CloudOneAccountID
         CloudOneOIDCProviderURL: !Sub 'cloudaccounts.${CloudOneRegion}.cloudone.trendmicro.com'
-      TemplateURL: https://cloud-one-cloud-accounts-us-east-1.s3.us-east-1.amazonaws.com/templates/aws/cloud-account-management-role.template
+      TemplateURL: !Sub 'https://cloud-one-cloud-accounts-${AWS::Region}.s3.${AWS::Region}.amazonaws.com/templates/aws/cloud-account-management-role.template'
 
   AddAWSAccountToCloudOneFunction:
     Type: AWS::Lambda::Function

@@ -92,7 +92,7 @@ Resources:
     DependsOn:
       - VisionOneEnrollmentStack
 
-  CloudTrailStack:
+  CloudTrailDeploymentStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
