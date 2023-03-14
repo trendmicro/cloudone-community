@@ -108,7 +108,7 @@ Resources:
       Parameters:
         ExistingCloudtrailBucketName: !Ref ExistingCloudtrailBucketName
         ServiceToken: !GetAtt CloudTrailGetInfoStack.Outputs.ServiceToken
-        ServiceURL: !GetAtt CloudTrailGetInfoStack.Outputs.ServiceUrl
+        ServiceURL: !GetAtt CloudTrailGetInfoStack.Outputs.ServiceURL
         S3BucketName: !GetAtt CloudTrailGetInfoStack.Outputs.S3BucketName
         APIVersion: !GetAtt CloudTrailGetInfoStack.Outputs.APIVersion
       TemplateURL: !GetAtt CloudTrailGetInfoStack.Outputs.TemplateURL
