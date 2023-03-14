@@ -134,13 +134,14 @@ Resources:
               - Ref: AWS::Partition
               - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
-  CloudTrailStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      Parameters:
-        ExistingCloudtrailBucketName: !Ref ExistingCloudtrailBucketName
-        ServiceToken: !GetAtt GetCloudTrailStackParameters.ServiceToken
-        ServiceURL: !GetAtt GetCloudTrailStackParameters.ServiceUrl
-        S3BucketName: !GetAtt GetCloudTrailStackParameters.S3BucketName
-        APIVersion: !GetAtt GetCloudTrailStackParameters.ApiVersion
-      TemplateURL: !GetAtt GetCloudTrailStackParameters.TemplateUrl
+Outputs:
+  ServiceToken: 
+    Value: !GetAtt GetCloudTrailStackParameters.ServiceToken
+  ServiceURL: 
+    Value: !GetAtt GetCloudTrailStackParameters.ServiceUrl
+  S3BucketName: 
+    Value: !GetAtt GetCloudTrailStackParameters.S3BucketName
+  APIVersion: 
+    Value: !GetAtt GetCloudTrailStackParameters.ApiVersion
+  TemplateURL: 
+    Value: !GetAtt GetCloudTrailStackParameters.TemplateUrl
