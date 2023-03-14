@@ -7,6 +7,7 @@ To fully integrate an AWS account in Cloud One, you must deploy resources in you
 - Have an API Key for a [Cloud One](https://www.trendmicro.com/cloudone) account. [Sign up for a free trial now](https://cloudone.trendmicro.com/register) if it's not already the case!
 - An AWS Account with Admin permissions
 - Generate a Vision One Enrollment Token.
+- An S3 Bucket that's already configured as a destination for a Trail.
 
 ## Limitations
 
