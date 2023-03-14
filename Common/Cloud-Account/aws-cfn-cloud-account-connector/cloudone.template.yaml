@@ -31,7 +31,7 @@ Resources:
       Parameters:
         CloudOneRegion: !Ref CloudOneRegion
         CloudOneAccountID: !Ref CloudOneAccountID
-        CloudOneOIDCProviderURL: "cloudaccounts.us-1.cloudone.trendmicro.com"
+        CloudOneOIDCProviderURL: !Sub 'cloudaccounts.${CloudOneRegion}.cloudone.trendmicro.com'
       TemplateURL: https://cloud-one-cloud-accounts-us-east-1.s3.us-east-1.amazonaws.com/templates/aws/cloud-account-management-role.template
 
   AddAWSAccountToCloudOneFunction:
