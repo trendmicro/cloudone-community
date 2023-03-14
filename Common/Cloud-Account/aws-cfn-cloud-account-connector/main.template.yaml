@@ -96,7 +96,6 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        ExistingCloudtrailBucketName: !Ref ExistingCloudtrailBucketName
         CloudOneRegion: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneRegion
         CloudOneApiKey: !Ref CloudOneApiKey
       TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/cloudtrail.template.yaml'
@@ -112,4 +111,4 @@ Resources:
         ServiceURL: !GetAtt CloudTrailGetInfoStack.Outputs.ServiceUrl
         S3BucketName: !GetAtt CloudTrailGetInfoStack.Outputs.S3BucketName
         APIVersion: !GetAtt CloudTrailGetInfoStack.Outputs.ApiVersion
-      TemplateURL: !GetAtt CloudTrailGetInfoStack.Outputs.TemplateUrl
+      TemplateURL: !GetAtt CloudTrailGetInfoStack.Outputs.TemplateURL
