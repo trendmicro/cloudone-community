@@ -110,5 +110,5 @@ Resources:
         ServiceToken: !GetAtt CloudTrailGetInfoStack.Outputs.ServiceToken
         ServiceURL: !GetAtt CloudTrailGetInfoStack.Outputs.ServiceUrl
         S3BucketName: !GetAtt CloudTrailGetInfoStack.Outputs.S3BucketName
-        APIVersion: !GetAtt CloudTrailGetInfoStack.Outputs.ApiVersion
+        APIVersion: !GetAtt CloudTrailGetInfoStack.Outputs.APIVersion
       TemplateURL: !GetAtt CloudTrailGetInfoStack.Outputs.TemplateURL
