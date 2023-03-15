@@ -30,6 +30,16 @@ Parameters:
   VisionOneServiceToken:
     Description: Vision One Service Token. See step 1 at https://docs.trendmicro.com/en-us/enterprise/trend-micro-xdr-help/ConfiguringCloudOneWorkloadSecurity/
     Type: String
+  CreateNewTrail:
+    Description: Decides if a new Trail should be created. Defaults to False,
+      so you must enter a S3 Bucket name in the ExistingCloudtrailBucketName
+      parameter. In case you pick True, a new trail and bucket will be created
+      for you. Setting this to true will incur in extra costs.
+    Type: String
+    AllowedValues:
+      - "True"
+      - "False"
+    Default: "False"
   ExistingCloudtrailBucketName:
     Description: Specify the name of an existing bucket that you want to use for forwarding
       to Trend Micro Cloud One.
@@ -53,6 +63,10 @@ Parameters:
       can include numbers, lowercase letters, uppercase letters, hyphens (-), dots(.) and
       forward slash (/).
     Type: String
+
+Conditions:
+  HasNoExistingCloudtrailBucketName:
+    !Equals ["True", !Ref CreateNewTrail]
 
 Resources:
   GetCloudOneRegionAndAccountStack:
@@ -106,7 +120,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        ExistingCloudtrailBucketName: !Ref ExistingCloudtrailBucketName
+        ExistingCloudtrailBucketName: !If [HasNoExistingCloudtrailBucketName, "", !Ref ExistingCloudtrailBucketName]
         ServiceToken: !GetAtt CloudTrailGetInfoStack.Outputs.ServiceToken
         ServiceURL: !GetAtt CloudTrailGetInfoStack.Outputs.ServiceURL
         S3BucketName: !GetAtt CloudTrailGetInfoStack.Outputs.S3BucketName
