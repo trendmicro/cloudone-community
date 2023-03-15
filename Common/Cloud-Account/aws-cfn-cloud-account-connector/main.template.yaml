@@ -9,6 +9,7 @@ Metadata:
       Parameters:
       - CloudOneApiKey
       - VisionOneServiceToken
+      - CreateNewTrail
       - ExistingCloudtrailBucketName
     - Label:
         default: 'Warning: Do not modify the fields below unless you know what you
@@ -27,9 +28,11 @@ Parameters:
   CloudOneApiKey:
     Description: Cloud One API Key. You can learn more about it at https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/
     Type: String
+    NoEcho: true
   VisionOneServiceToken:
     Description: Vision One Service Token. See step 1 at https://docs.trendmicro.com/en-us/enterprise/trend-micro-xdr-help/ConfiguringCloudOneWorkloadSecurity/
     Type: String
+    NoEcho: true
   CreateNewTrail:
     Description: Decides if a new Trail should be created. Defaults to False,
       so you must enter a S3 Bucket name in the ExistingCloudtrailBucketName
@@ -44,6 +47,7 @@ Parameters:
     Description: Specify the name of an existing bucket that you want to use for forwarding
       to Trend Micro Cloud One.
     Type: String
+    Default: EnterAValueHere
   QSS3BucketName:
     AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
