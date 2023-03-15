@@ -3,10 +3,10 @@ Description: Trend Cloud One Workload Security Integration.
 
 Parameters:
   CloudOneAccountID:
-    Description: Cloud One Account Id. You can find it at...
+    Description: Cloud One Account Id. You can learn more about it at https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/
     Type: String
   CloudOneApiKey:
-    Description: Cloud One API Key. You can find it at...
+    Description: Cloud One API Key. You can learn more about it at https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/
     Type: String
   CloudOneRegion:
     Description: Cloud One Region

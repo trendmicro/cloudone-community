@@ -1,12 +1,23 @@
 # Add AWS Account to Cloud One
 
-To fully integrate an AWS account in Cloud One, you must deploy resources in your AWS account and do manual steps in TrendCloud One dashboard. This CloudFormation template automates all these steps on your behalf, including integrating it to Vision One.
+To fully integrate an AWS account in Cloud One, you must deploy resources in your AWS account and do manual steps in Trend Cloud One dashboard. This CloudFormation template automates all these steps on your behalf, including integrating it to Vision One.
+
+## What does it actually do?
+
+1. A Custom Resource gets the Cloud One Account ID and Cloud One Region.
+2. A Custom Resource completes the integration between the Cloud One and Vision One accounts.
+3. All the required IAM resources for Workload Security is created.
+4. A Custom Resource completes the integration between the AWS and Workload Security accounts.
+5. The default Cloud One CloudFormation stack is deployed.
+6. A Custom Resource completes the integration between the AWS and Cloud One accounts.
+7. A Custom Resource gets from Cloud One backend the Token for CloudTrail integration.
+8. The default CloudTrail CloudFormation stack is deployed.
 
 ## Requirements
 
-- Have an API Key for a [Cloud One](https://www.trendmicro.com/cloudone) account. [Sign up for a free trial now](https://cloudone.trendmicro.com/register) if it's not already the case!
+- Have an API Key for a [Cloud One](https://www.trendmicro.com/cloudone) account. Click [here](https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/#new-api-key) for a guide on how to generate an API Key.
 - An AWS Account with Admin permissions
-- Generate a Vision One Enrollment Token.
+- Generate a Vision One Enrollment Token. See step #1 in [this documentation](https://docs.trendmicro.com/en-us/enterprise/trend-micro-xdr-help/ConfiguringCloudOneWorkloadSecurity).
 - An S3 Bucket that's already configured as a destination for a Trail.
 
 ## Limitations
