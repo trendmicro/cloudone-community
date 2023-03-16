@@ -21,7 +21,7 @@ Parameters:
        - ca-1
        - de-1
   VisionOneServiceToken:
-    Description: Vision One Service Token. You can find it at...
+    Description: Vision One Service Token. See step 1 at https://docs.trendmicro.com/en-us/enterprise/trend-micro-xdr-help/ConfiguringCloudOneWorkloadSecurity/
     Type: String
   
 
