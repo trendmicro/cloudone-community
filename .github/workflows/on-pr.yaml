@@ -1,0 +1,22 @@
+name: On Pull Request
+
+env:
+  BUCKET_NAME: 'cloudone-community'
+  AWS_REGION: 'us-east-1'
+
+on: pull_request
+
+jobs:
+  sync-files:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: jakejarvis/s3-sync-action@master
+      with:
+        args: --acl public-read --follow-symlinks --delete --exclude '.git/*'
+      env:
+        AWS_S3_BUCKET: ${{ env.BUCKET_NAME }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ env.AWS_REGION }}
+        DEST_DIR: ${{ github.sha }}
