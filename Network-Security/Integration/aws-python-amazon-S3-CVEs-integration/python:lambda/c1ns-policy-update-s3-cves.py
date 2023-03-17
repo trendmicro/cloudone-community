@@ -1,25 +1,15 @@
 import os
-import sys, warnings
-import csv
 from io import StringIO
 import json
-from typing import List
-from pprint import pprint
-from tempfile import TemporaryFile
-import boto3
-from botocore.exceptions import ClientError
+import urllib.parse
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
-from urllib.request import Request, urlopen
-from urllib.parse import urlencode
+import boto3
 import pandas as pd
 
-import json
-import urllib.parse
-
-
-s3 = boto3.client("s3")
 
 #### leave the following uncomment for Cloud Formation Template deployment.. followings are parameters that need to be input##
 API_VERSION = "v1"
@@ -27,7 +17,9 @@ AWS_REGION = os.environ.get("awsregion")
 SENDER = os.environ.get("sender")
 RECIPIENTS = os.environ.get("recipients")
 API_KEY = os.environ.get("c1_api")
-API_HOST = f"https://network.{os.environ.get('cloudoneregion')}.cloudone.trendmicro.com/api"
+API_HOST = (
+    f"https://network.{os.environ.get('cloudoneregion')}.cloudone.trendmicro.com/api"
+)
 ACTION_SET = os.environ.get("actionset")
 PROFILE_NAME = os.environ.get("profilename")
 ######################################## Uncomment the following if you running on your local machine
@@ -39,19 +31,26 @@ PROFILE_NAME = os.environ.get("profilename")
 # PROFILE_NAME = "Default-Profile"
 # ACTION_SET = "Block + Notify"
 
-secrets = boto3.client('secretsmanager').get_secret_value(SecretId=API_KEY)
+## initialize the variables
+# Create a new SES resource and specify a region.
+ses = boto3.client("ses", region_name=AWS_REGION)
+# Create a new S3 resource
+s3 = boto3.client("s3")
+sts = boto3.client("sts")
+# Create a new Secretmanager
+secrets = boto3.client("secretsmanager").get_secret_value(SecretId=API_KEY)
 sm_data = json.loads(secrets["SecretString"])
 new_api_format = sm_data["ApiKey"]
 HEADERS = {
     "api-version": API_VERSION,
     "Authorization": f"ApiKey {new_api_format}",
     "Content-Type": "application/json",
-    'Accept':'application/json'
+    "Accept": "application/json",
 }
 
-## initialize the variables
-# Create a new SES resource and specify a region.
-ses = boto3.client("ses", region_name=AWS_REGION)
+
+def get_account_id():
+    return sts.get_caller_identity()["Account"]
 
 
 def send_email(sender, recipients, subject, html_body, attachment_details=None):
@@ -224,10 +223,11 @@ def lambda_handler(event, context):
     print("Received event: " + json.dumps(event, indent=2))
 
     # Get the object from the event and show its content type
-    bucket = event['Records'][0]['s3']['bucket']['name']
-    key = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
-    # bucket = "c1nstestingstackbuckettt"
-    # key = "sample.csv"
+    bucket = event["Records"][0]["s3"]["bucket"]["name"]
+    key = urllib.parse.unquote_plus(
+        event["Records"][0]["s3"]["object"]["key"], encoding="utf-8"
+    )
+
     try:
         print("downloading csv from bucket...")
         response = s3.get_object(Bucket=bucket, Key=key)
@@ -294,10 +294,6 @@ def lambda_handler(event, context):
                 print(e)
                 failed_table_rows_updated_filters.append([policy["name"], e])
 
-    # print('test policy update')
-    # print(update_policy(profile_id, action_set_id, '00000001-0001-0001-0001-000000041752'))
-
-    # get_distribution_history()
     appliance_ids = get_appliance_ids()
     # print(appliance_ids)
     for appliance in appliance_ids:
@@ -307,7 +303,7 @@ def lambda_handler(event, context):
             print(e)
 
     # The subject line for the email.
-    subject = "Intrusion Prevention Filtering Update from Network Security"
+    subject = f"Intrusion Prevention Filtering Update from Network Security - {get_account_id()},{AWS_REGION}"
 
     # check if any intrusion prevention filters were updated or not and send email
     no_filters_to_update_html_body = "<p>No Intrusion Prevention Filters to update</p>"
@@ -395,6 +391,3 @@ def lambda_handler(event, context):
         subject,
         body_html,
     )
-
-######################################## Uncomment the following if you running on your local machine
-# lambda_handler(None, None)
