@@ -85,7 +85,7 @@ Resources:
         - python3.9
       Content:
         S3Bucket: !Ref LambdaLayerBucket 
-        S3Key: "DeepSecurityPackageLayer.zip" 
+        S3Key: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-python-amazon-inspector-integration/python:lambda/DeepSecurityPackageLayer.zip
       LayerName: "DSlayer"
   LambdaRole: 
     Type: "AWS::IAM::Role"
