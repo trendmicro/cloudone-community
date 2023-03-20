@@ -1,0 +1,281 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  AwsRegion:
+    Type: String
+    Description: Please enter the region in which the lambda will be executed
+    Default : us-east-1
+    AllowedValues:
+      - us-east-1
+      - us-east-2	
+      - us-east-1	
+      - us-west-1	
+      - us-west-2
+      - af-south-1
+      - ap-east-1
+      - ap-southeast-3
+      - ap-south-1
+      - ap-northeast-3
+      - ap-northeast-2
+      - ap-southeast-1
+      - ap-southeast-2
+      - ap-northeast-1
+      - ca-central-1
+      - eu-central-1
+      - eu-west-1
+      - eu-west-2
+      - eu-south-1
+      - eu-west-3
+      - eu-north-1
+      - me-south-1
+      - me-central-1
+      - sa-east-1
+  ApiKey:
+    Type: String
+    NoEcho: "true"
+    Description: Please enter your Cloud One API Key
+  EmailSender:
+    Type: String
+    Description: Email address to be used for sending report
+  EmailRecipients:
+    Type: String
+    Description: Comma separated (without spaces) email addresses for recieving report
+  ActionSet:
+    Type: String
+    Description: Choose the recommended ActionSet you would like apply to the Intrusion Prevention Filtering
+    AllowedValues:
+      - Block
+      - Permit
+      - Trust
+    Default: Block
+  ProfileName:
+    Type: String
+    Default: Default-Profile
+    Description: Profile name for Appliances 
+  CronSchedule:
+    Type: String
+    Description: Schedule the time you would like the lambda function to run in the cron format (Default is every wednesday)
+    Default: cron(0 12 ? * WED *)
+  CloudOneRegion:
+    Type: String
+    Description: Enter your Cloud One Region
+    Default: us-1
+    AllowedValues:
+      - trend-us-1
+      - us-1
+      - in-1
+      - gb-1
+      - jp-1
+      - de-1
+      - au-1
+      - ca-1
+      - sg-1
+  QSS3BucketName:
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+    ConstraintDescription: Quick Start bucket name can include numbers, lowercase
+      letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
+      (-).
+    Default: cloudone-community
+    Description: DO NOT MODIFY. This bucket is for quick start deployment
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: ^[0-9a-zA-Z-/.]*$
+    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), dots(.) and forward slash (/).
+    Default: "latest/"
+    Description: DO NOT MODIFY. This is for quick start deployment
+    Type: String
+
+Mappings: 
+  ActionToFlowControl:
+    key:
+      Block: "Block + Notify"
+      Permit: "Permit + Notify"
+      Trust: "Trust"
+
+Resources:
+  LambdaRole: 
+    Type: "AWS::IAM::Role"
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Principal: 
+              Service: 
+                - "lambda.amazonaws.com" 
+            Action: 
+              - "sts:AssumeRole"  
+      ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/AmazonVPCCrossAccountNetworkInterfaceOperations
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+          - arn:aws:iam::aws:policy/AmazonInspector2ReadOnlyAccess
+          - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+          - !Ref LambdaSESWritePolicy
+          - !Ref LambdaInvokePolicy
+          - !Ref LambdaSecretAcessPolicy
+
+  LambdaInvokePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - lambda:InvokeFunction
+          - lambda:InvokeAsync
+          Resource: 
+          - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:PolicyUpdateLambda
+          - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:FindingsReportLambda
+  LambdaSESWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - ses:CreateReceiptRule
+          - ses:UpdateConfigurationSetEventDestination
+          - ses:SetIdentityMailFromDomain
+          - ses:DeleteReceiptFilter
+          - ses:VerifyEmailIdentity
+          - ses:DeleteCustomVerificationEmailTemplate
+          - ses:TestRenderTemplate
+          - ses:CreateReceiptFilter
+          - ses:DeleteReceiptRule
+          - ses:DeleteConfigurationSet
+          - ses:CreateConfigurationSetTrackingOptions
+          - ses:UpdateAccountSendingEnabled
+          - ses:DeleteConfigurationSetEventDestination
+          - ses:VerifyDomainDkim
+          - ses:DeleteVerifiedEmailAddress
+          - ses:VerifyDomainIdentity
+          - ses:CloneReceiptRuleSet
+          - ses:SetIdentityHeadersInNotificationsEnabled
+          - ses:SendEmail
+          - ses:SendTemplatedEmail
+          - ses:SendCustomVerificationEmail
+          - ses:UpdateTemplate
+          - ses:DeleteConfigurationSetTrackingOptions
+          - ses:UpdateConfigurationSetTrackingOptions
+          - ses:SetIdentityNotificationTopic
+          - ses:SetIdentityDkimEnabled
+          - ses:PutConfigurationSetDeliveryOptions
+          - ses:VerifyEmailAddress
+          - ses:UpdateReceiptRule
+          - ses:CreateConfigurationSet
+          - ses:UpdateConfigurationSetReputationMetricsEnabled
+          - ses:DeleteReceiptRuleSet
+          - ses:CreateTemplate
+          - ses:SendRawEmail
+          - ses:ReorderReceiptRuleSet
+          - ses:SendBounce
+          - ses:UpdateConfigurationSetSendingEnabled
+          - ses:SetActiveReceiptRuleSet
+          - ses:CreateCustomVerificationEmailTemplate
+          - ses:UpdateCustomVerificationEmailTemplate
+          - ses:DeleteTemplate
+          - ses:CreateReceiptRuleSet
+          - ses:SetReceiptRulePosition
+          - ses:CreateConfigurationSetEventDestination
+          - ses:SendBulkTemplatedEmail
+          - ses:DeleteIdentity
+          - ses:SetIdentityFeedbackForwardingEnabled
+          Resource: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailRecipients}
+
+  LambdaSecretAcessPolicy: 
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - "secretsmanager:GetSecretValue"
+          - "secretsmanager:DescribeSecret"
+          - "sts:AssumeRole"
+          Resource: !Ref ApiKeySecret
+
+  #   This secret holds the Trend Micro Cloud One API key.
+  ApiKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: "TrendMicro/CloudOne/ApiKey"
+      SecretString: !Sub |
+        {
+          "ApiKey": "${ApiKey}"
+        }
+
+  FindingsReportLambda:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Environment:
+        Variables:
+          awsregion: !Ref AwsRegion
+          c1_api: !Ref ApiKeySecret
+          sender: !Ref EmailSender
+          recipients: !Ref EmailRecipients
+          cloudoneregion: !Ref CloudOneRegion
+
+      Code:
+        S3Bucket: !Sub ${QSS3BucketName}
+        S3Key: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-python-amazon-inspector-integration/python:lambda/FindingsReportLambda.py
+      FunctionName: "FindingsReportLambda"
+      Handler: "index.lambda_handler"
+      Runtime: python3.9
+      Timeout: 600
+      MemorySize: 512
+      Role: !GetAtt LambdaRole.Arn
+
+  PolicyUpdateLambda:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Environment:
+        Variables:
+          region: !Ref AwsRegion
+          c1_api: !Ref ApiKeySecret
+          sender: !Ref EmailSender
+          recipients: !Ref EmailRecipients
+          cloudoneregion: !Ref CloudOneRegion
+          actionset: !FindInMap [ActionToFlowControl, key, !Ref ActionSet]
+          profilename: !Ref ProfileName
+          findings_report_lambda_function_name: FindingsReportLambda
+      Code:
+        S3Bucket: !Sub ${QSS3BucketName}
+        S3Key: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-python-amazon-inspector-integration/python:lambda/PolicyUpdateLambda.py
+      FunctionName: "PolicyUpdateLambda"
+      Handler: "index.lambda_handler"
+      Runtime: python3.9
+      Timeout: 600
+      MemorySize: 512
+      Role: !GetAtt LambdaRole.Arn
+
+  ScheduledRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "ScheduledRule"
+      ScheduleExpression: !Sub ${CronSchedule} 
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: 
+            Fn::GetAtt: 
+              - "PolicyUpdateLambda"
+              - "Arn"
+          Id: "TargetFunctionV1"
+  
+  PermissionForEventsToInvokeLambda: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: !Ref "PolicyUpdateLambda"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: 
+        Fn::GetAtt: 
+          - "ScheduledRule"
+          - "Arn"
+ 
