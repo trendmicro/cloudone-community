@@ -29,7 +29,6 @@ Parameters:
       - me-south-1
       - me-central-1
       - sa-east-1
-
   LambdaLayerBucket:
     Type: String
     Description: Please enter your the name of your S3 bucket where you uploaded the DeepSecurityPackageLayer zip file
