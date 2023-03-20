@@ -208,6 +208,8 @@ Resources:
           recipients: !Ref EmailRecipients
           cloudoneregion: !Ref CloudOneRegion
       Code:
+        # S3Bucket: cloudone-community
+        # S3Key: VulnerabilityReport.py.zip
         ZipFile: |
             from __future__ import print_function
             import os
@@ -218,18 +220,16 @@ Resources:
             from botocore.exceptions import ClientError
             from datetime import datetime
             from pprint import pprint
-
             from typing import List
             from email.mime.multipart import MIMEMultipart
             from email.mime.text import MIMEText
             from email.mime.application import MIMEApplication
             from tempfile import TemporaryFile
-
             import deepsecurity as ds
             from deepsecurity.models.intrusion_prevention_rule import IntrusionPreventionRule
             from deepsecurity.models.intrusion_prevention_rules import IntrusionPreventionRules
             from deepsecurity.rest import ApiException
-                
+
 
             API_VERSION = "v1"
             AWS_REGION = os.environ.get('awsregion')
@@ -238,10 +238,30 @@ Resources:
             HOST = f"https://workload.{os.environ.get('cloudoneregion')}.cloudone.trendmicro.com/api"
             C1_API_KEY = os.environ.get("c1_api")
 
+            ######################################## Uncomment the following if you running on your local machine and comment the above 6 lines
+            # API_VERSION = "v1"
+            # AWS_REGION = "us-east-1"  ##You can input the aws region you want here
+            # SENDER = "sender@email.com"
+            # RECIPIENTS = "recipient@email.com"
+            # HOST = "https://workload.trend-us-1.cloudone.trendmicro.com/api"
+            # API_KEY = 'Your Cloud One API KEY'
+
+
+            inspector = boto3.client("inspector2", region_name=AWS_REGION)
+            sts = boto3.client('sts')
+            # Create a new SES resource and specify a region.
+            ses = boto3.client("ses", region_name=AWS_REGION)
+            secrets_manager = boto3.client('secretsmanager')
+
+
+            def get_account_id():
+                return sts.get_caller_identity()['Account']
+
+
             def cves_from_instance(instance_id, inspector):
                 cves = list()
                 result = list()
-                print('<<<<<<< checking instance id:', instance_id)
+                print("<<<<<<< checking instance id:", instance_id)
                 resp = inspector.list_findings(
                     filterCriteria={
                         "findingStatus": [{"comparison": "EQUALS", "value": "ACTIVE"}],
@@ -260,7 +280,6 @@ Resources:
                     )
                     result.extend(resp["findings"])
                     next_token = resp.get("nextToken")
-
                 for finding in result:
                     cve = finding.get("packageVulnerabilityDetails", {}).get("vulnerabilityId")
                     if cve:
@@ -277,7 +296,7 @@ Resources:
                     # aggregationRequest='AWS_EC2_INSTANCE',
                 )
                 result.extend(findings["responses"])
-                next_token = findings.get('nextToken')
+                next_token = findings.get("nextToken")
                 while next_token:
                     findings = inspector.list_finding_aggregations(
                         aggregationType="AWS_EC2_INSTANCE",
@@ -285,12 +304,13 @@ Resources:
                         nextToken=next_token,
                     )
                     result.extend(findings["responses"])
-                    next_token = findings.get('nextToken')
-
+                    next_token = findings.get("nextToken")
                 for finding in result:
                     instance_details = {
                         "id": finding["ec2InstanceAggregation"]["instanceId"],
-                        "name": finding["ec2InstanceAggregation"].get("instanceTags", {}).get("Name"),
+                        "name": finding["ec2InstanceAggregation"]
+                        .get("instanceTags", {})
+                        .get("Name"),
                     }
                     instances.append(instance_details)
                 print("Found total instances =", len(instances))
@@ -310,64 +330,54 @@ Resources:
 
             def send_email(sender, recipients, subject, html_body, attachment_details):
                 print("sending email ...")
-
                 # Create a new SES resource and specify a region.
                 client = boto3.client("ses", region_name=AWS_REGION)
-
                 msg = MIMEMultipart()
                 text_part = MIMEText(html_body, _subtype="html")
                 msg.attach(text_part)
 
-                
                 msg["To"] = recipients
                 msg["From"] = sender
                 msg["Subject"] = subject
-
                 for item in attachment_details:
                     filename = item["filename"]
                     attachment = item["attachment"]
-
                     part = MIMEApplication(attachment.read(), filename)
                     part.add_header("Content-Disposition", "attachment", filename=filename)
                     msg.attach(part)
-
                 client.send_raw_email(RawMessage={"Data": msg.as_bytes()})
 
 
             def lambda_handler(event, context):
                 # get secret
-                secrets = boto3.client('secretsmanager').get_secret_value(SecretId=C1_API_KEY)
+                secrets = secrets_manager.get_secret_value(SecretId=C1_API_KEY)
                 sm_data = json.loads(secrets["SecretString"])
                 new_api_format = sm_data["ApiKey"]
                 conf, api_version = ds_config_and_version(new_api_format)
 
+            ######################################## Uncomment the following (the line below) if you running on your local machine and comment the above last 4 lines
+                # conf, api_version = ds_config_and_version(API_KEY)
                 csv_rows = list()
                 inspector = boto3.client("inspector2")
                 all_instance_details = all_instances_details_from_inspector(inspector)
                 for instance_details in all_instance_details:
                     instance_id = instance_details["id"]
                     instance_name = instance_details["name"]
-
                     print(instance_name, instance_id)
                     cves = cves_from_instance(instance_id, inspector)
                     print("inspector", cves)
-
                     search_criteria = ds.SearchCriteria()
                     search_criteria.field_name = "ec2VirtualMachineSummary/instanceID"
                     search_criteria.string_test = "equal"
                     search_criteria.string_value = instance_id
-
                     # Create a search filter with maximum returned items
                     search_filter = ds.SearchFilter()
                     search_filter.search_criteria = [search_criteria]
-
                     expand = ds.Expand(ds.Expand.intrusion_prevention)
                     expand.add(ds.Expand.ec2_virtual_machine_summary)
-
                     # Perform the search and do work on the results
                     computers_api = ds.ComputersApi(ds.ApiClient(conf))
                     rows = []
-
                     computers = computers_api.search_computers(
                         api_version,
                         search_filter=search_filter,
@@ -375,10 +385,8 @@ Resources:
                         overrides=False,
                     )
                     num_found = len(computers.computers)
-
                     if num_found == 0:
                         print(f"No computers found for instance id: {instance_id}")
-
                     for computer in computers.computers:
                         # print('ips', computer.intrusion_prevention)
                         # print(computer.host_name)
@@ -416,7 +424,6 @@ Resources:
                                                     ipr.cvss_score,
                                                 ]
                                             )
-
                 csv_file = TemporaryFile(mode="w+", newline="")
                 writer = csv.writer(csv_file)
                 csv_header_protected_instances = [
@@ -432,10 +439,8 @@ Resources:
                 for row in csv_rows:
                     writer.writerow(row)
                 csv_file.seek(0)
-
                 # The subject line for the email.
-                subject = "Vulnerability Report (CVEs) from Intrusion Prevention"
-
+                subject = f"Vulnerability Report (CVEs) from Intrusion Prevention - {get_account_id()}, {AWS_REGION}"
                 protected_instances_html = '<table border="1">' + "\n"
                 # write headers
                 protected_instances_html += "</tr>" + "\n"
@@ -449,7 +454,6 @@ Resources:
                         protected_instances_html += f"<td>{col}</td>" + "\n"
                     protected_instances_html += "</tr>" + "\n"
                 protected_instances_html += "</table>"
-
                 csv_rows_unprotected_instances = list()
                 all_instance_details = all_instances_details_from_inspector(inspector)
                 for instance_details in all_instance_details:
@@ -459,7 +463,6 @@ Resources:
                     if cves:
                         for cve in cves:
                             csv_rows_unprotected_instances.append([id, name, cve])
-
                 tmp_csv_file_unprotected_instances = TemporaryFile(mode="w+", newline="")
                 writer = csv.writer(tmp_csv_file_unprotected_instances)
                 csv_header_unprotected_instances = ["instance_id", "name", "cve"]
@@ -467,7 +470,6 @@ Resources:
                 for row in csv_rows_unprotected_instances:
                     writer.writerow(row)
                 tmp_csv_file_unprotected_instances.seek(0)
-
                 unprotected_instances_html = '<table border="1">' + "\n"
                 # write headers
                 unprotected_instances_html += "</tr>" + "\n"
@@ -481,8 +483,6 @@ Resources:
                         unprotected_instances_html += f"<td>{col}</td>" + "\n"
                     unprotected_instances_html += "</tr>" + "\n"
                 unprotected_instances_html += "</table>"
-
-
                 # The HTML body of the email.
                 body_html = f"""<html>
                 <head></head>
@@ -494,18 +494,22 @@ Resources:
                 </body>
                 </html>
                 """
-
                 send_email(
                     SENDER,
                     RECIPIENTS,
                     subject,
                     body_html,
-                    [{"filename": "protected_instances.csv", "attachment": csv_file},
-                    {
-                        "filename": "unprotected_instances.csv",
-                        "attachment": tmp_csv_file_unprotected_instances,
-                    }],
+                    [
+                        {"filename": "protected_instances.csv", "attachment": csv_file},
+                        {
+                            "filename": "unprotected_instances.csv",
+                            "attachment": tmp_csv_file_unprotected_instances,
+                        },
+                    ],
                 )
+
+            ######################################## Uncomment the following if you running on your local machine
+            # lambda_handler(None, None)
 
       FunctionName: "vulnerability_report_lambda"
       Handler: "index.lambda_handler"
@@ -529,6 +533,8 @@ Resources:
           cloudoneregion: !Ref CloudOneRegion
           vulnerability_report_lambda_function_name: vulnerability_report_lambda
       Code:
+        # S3Bucket: vulnerabilitytestbucket
+        # S3Key: AutoAssign.py.zip
         ZipFile: |
             import sys, warnings
             import json
@@ -553,6 +559,25 @@ Resources:
             C1_API_KEY = os.environ.get("c1_api")
             VULNERABILITY_REPORT_LAMBDA_FUNCTION = os.getenv("vulnerability_report_lambda_function_name")
 
+            ######################################## Uncomment the following if you running on your local machine and comment the above 7 lines
+            # API_VERSION = "v1"
+            # AWS_REGION = "us-east-1"  ##You can input the aws region you want here
+            # SENDER = "sender@email.com"
+            # RECIPIENTS = "recipient@email.com"
+            # HOST = "https://workload.trend-us-1.cloudone.trendmicro.com/api"
+            # API_KEY = 'Your Cloud One API KEY'
+
+
+            inspector = boto3.client("inspector2", region_name=AWS_REGION)
+            sts = boto3.client('sts')
+            # Create a new SES resource and specify a region.
+            ses = boto3.client("ses", region_name=AWS_REGION)
+            secrets_manager = boto3.client('secretsmanager')
+            lambda_client = boto3.client("lambda")
+
+
+            def get_account_id():
+                return sts.get_caller_identity()['Account']
 
             def ds_config_and_version(cloud_one_api_key):
                 # Setup
@@ -568,24 +593,18 @@ Resources:
             def list_all_ips_rules(conf, api_version) -> List[IntrusionPreventionRule]:
                 api_client = ds.ApiClient(configuration=conf)
                 all_ips_rules: List[IntrusionPreventionRule] = list()
-
                 ips = ds.IntrusionPreventionRulesApi(api_client=api_client)
-
                 search_criteria = ds.SearchCriteria(id_value=0, id_test="greater-than")
                 search_filter = ds.SearchFilter(max_items=5000, search_criteria=[search_criteria])
-
                 while True:
                     rules: IntrusionPreventionRules = ips.search_intrusion_prevention_rules(
                         api_version=api_version, search_filter=search_filter, async_req=False
                     )
-
                     ips_rules: List[IntrusionPreventionRule] = rules.intrusion_prevention_rules
                     if not ips_rules:
                         break
-
                     all_ips_rules.extend(ips_rules)
                     search_criteria.id_value = ips_rules[-1].id
-
                 return all_ips_rules
 
 
@@ -595,25 +614,19 @@ Resources:
                 search_criteria.field_name = "ec2VirtualMachineSummary/instanceID"
                 search_criteria.string_test = "equal"
                 search_criteria.string_value = instance_id
-
                 # Create a search filter with maximum returned items
                 search_filter = ds.SearchFilter()
                 search_filter.search_criteria = [search_criteria]
-
                 expand = ds.Expand(ds.Expand.intrusion_prevention)
                 expand.add(ds.Expand.ec2_virtual_machine_summary)
-
                 # Perform the search and do work on the results
                 computers_api = ds.ComputersApi(ds.ApiClient(configuration))
-
                 computers = computers_api.search_computers(
                     api_version, search_filter=search_filter, expand=expand.list(), overrides=False
                 )
                 num_found = len(computers.computers)
-
                 if num_found == 0:
                     print(f"No computers found for instance id: {instance_id}")
-
                 for computer in computers.computers:
                     return computer
 
@@ -627,26 +640,20 @@ Resources:
                 search_criteria.field_name = "ec2VirtualMachineSummary/instanceID"
                 search_criteria.string_test = "equal"
                 search_criteria.string_value = instance_id
-
                 # Create a search filter with maximum returned items
                 search_filter = ds.SearchFilter()
                 search_filter.search_criteria = [search_criteria]
-
                 expand = ds.Expand(ds.Expand.intrusion_prevention)
                 expand.add(ds.Expand.ec2_virtual_machine_summary)
-
                 # Perform the search and do work on the results
                 computers_api = ds.ComputersApi(ds.ApiClient(configuration))
                 rows = []
-
                 computers = computers_api.search_computers(
                     api_version, search_filter=search_filter, expand=expand.list(), overrides=False
                 )
                 num_found = len(computers.computers)
-
                 if num_found == 0:
                     print(f"No computers found for instance id: {instance_id}")
-
                 for computer in computers.computers:
                     # print('ips', computer.intrusion_prevention)
                     # print(computer.host_name)
@@ -658,7 +665,6 @@ Resources:
                             if cves:
                                 for cve in cves:
                                     rows.append(cve)
-
                     else:
                         print(f"instance has no ips - {instance_id}")
                 return rows
@@ -672,7 +678,6 @@ Resources:
                 )
                 intrusion_prevention_rule_ids = ds.RuleIDs(rule_ids=rule_ids)
                 overrides = False
-
                 try:
                     api_response = api_instance.add_intrusion_prevention_rule_ids_to_computer(
                         computer_id,
@@ -710,7 +715,6 @@ Resources:
                     )
                     result.extend(resp["findings"])
                     next_token = resp.get("nextToken")
-
                 for finding in result:
                     cve = finding.get("packageVulnerabilityDetails", {}).get("vulnerabilityId")
                     if cve:
@@ -727,7 +731,7 @@ Resources:
                     # aggregationRequest='AWS_EC2_INSTANCE',
                 )
                 result.extend(findings["responses"])
-                next_token = findings.get('nextToken')
+                next_token = findings.get("nextToken")
                 while next_token:
                     findings = inspector.list_finding_aggregations(
                         aggregationType="AWS_EC2_INSTANCE",
@@ -735,12 +739,13 @@ Resources:
                         nextToken=next_token,
                     )
                     result.extend(findings["responses"])
-                    next_token = findings.get('nextToken')
-
+                    next_token = findings.get("nextToken")
                 for finding in result:
                     instance_details = {
                         "id": finding["ec2InstanceAggregation"]["instanceId"],
-                        "name": finding["ec2InstanceAggregation"].get("instanceTags", {}).get("Name"),
+                        "name": finding["ec2InstanceAggregation"]
+                        .get("instanceTags", {})
+                        .get("Name"),
                     }
                     instances.append(instance_details)
                 print("Found total instances =", len(instances))
@@ -755,14 +760,11 @@ Resources:
                 print("sending email confirmation...")
                 # The character encoding for the email.
                 CHARSET = "UTF-8"
-
-                # Create a new SES resource and specify a region.
-                client = boto3.client("ses", region_name=AWS_REGION)
-
+                
                 # Try to send the email.
                 try:
                     # Provide the contents of the email.
-                    response = client.send_email(
+                    response = ses.send_email(
                         Destination={
                             "ToAddresses": recipients,
                         },
@@ -797,26 +799,22 @@ Resources:
 
             def lambda_handler(event, context):
                 # get secret
-                secrets = boto3.client('secretsmanager').get_secret_value(SecretId=C1_API_KEY)
+                secrets = secrets_manager.get_secret_value(SecretId=C1_API_KEY)
                 sm_data = json.loads(secrets["SecretString"])
                 new_api_format = sm_data["ApiKey"]
                 conf, api_version = ds_config_and_version(new_api_format)
-
+            ######################################## Uncomment the following (the line below) if you running on your local machine and comment the above last 4 lines
+                # conf, api_version = ds_config_and_version(API_KEY)
                 add_rules_output = dict()
-                inspector = boto3.client("inspector2", region_name=AWS_REGION)
-
                 ips_rules = list_all_ips_rules(conf=conf, api_version=api_version)
                 ips_rules_info = dict()
                 for ipr in ips_rules:
                     if ipr.cve:
                         ips_rules_info[ipr.id] = {"cves": ipr.cve, "name": ipr.name}
-
-                inspector = boto3.client("inspector2")
                 all_instance_details = all_instances_details_from_inspector(inspector)
                 for instance_details in all_instance_details:
                     instance_id = instance_details["id"]
                     instance_name = instance_details["name"]
-
                     vul_from_instance = vulnerabilities_from_instance(
                         conf, api_version, instance_id, ips_rules_info
                     )
@@ -851,17 +849,13 @@ Resources:
                                     add_rules_output[instance_id] = ips_rules_info[rule_id]["name"]
                 print(f"added rules to {len(add_rules_output)} computer(s)")
                 print(add_rules_output)
-
                 if add_rules_output:
                     # Specify a configuration set. If you do not want to use a configuration
                     # set, comment the following variable, and the
                     # ConfigurationSetName=CONFIGURATION_SET argument below.
-
-                    # The subject line for the email.
-                    subject = "Added Rules To Instances"
+                    
                     # The email body for recipients with non-HTML email clients.
                     body = f"Added rules:\r\n" "{add_rules_output}\r\n"
-
                     added_rules_table_html = '<table border="1">' + "\n"
                     # write headers
                     added_rules_table_html += "</tr>" + "\n"
@@ -875,7 +869,6 @@ Resources:
                         added_rules_table_html += f"<td>{add_rules_output[instance_id]}</td>" + "\n"
                         added_rules_table_html += "</tr>" + "\n"
                     added_rules_table_html += "</table>"
-
                     # The HTML body of the email.
                     body_html = f"""<html>
                     <head></head>
@@ -885,21 +878,31 @@ Resources:
                     </body>
                     </html>
                     """
-
-                    send_email(SENDER, RECIPIENTS.split(","), subject, body, body_html)
-
-                lambda_client = boto3.client('lambda')
-                lambda_payload = b''
-                lambda_client.invoke(FunctionName=VULNERABILITY_REPORT_LAMBDA_FUNCTION, 
-                                        InvocationType='Event',
-                                        Payload=lambda_payload)
-                print('triggered vulnerability report lambda function')
+                else:
+                    body = 'No new IPS rules added to instances'
+                    body_html = f"""<html>
+                    <head></head>
+                    <body>
+                    No new IPS rules added to instances
+                    </body>
+                    </html>
+                    """
+                # The subject line for the email.
+                subject = f"IPS Rules Update from Workload Security - {get_account_id()}, {AWS_REGION}"
+                send_email(SENDER, RECIPIENTS.split(","), subject, body, body_html)
 
             ######################################## Uncomment the following if you running on your local machine
-            #lambda_handler(None, None)
+                lambda_payload = b""
+                lambda_client.invoke(
+                    FunctionName=VULNERABILITY_REPORT_LAMBDA_FUNCTION,
+                    InvocationType="Event",
+                    Payload=lambda_payload,
+                )
+                print("triggered vulnerability report lambda function")
 
 
-
+            ######################################## Uncomment the following if you running on your local machine
+            # lambda_handler(None, None)
       FunctionName: "AutoAssignIpsRuleLambda"
       Handler: "index.lambda_handler"
       Layers:
