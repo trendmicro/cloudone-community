@@ -5,7 +5,7 @@ This script will deploy a lambda functions that facilitate the integration.
 
 Click the below to launch the CloudFormation template.
 
-[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1ns-inspector-findings-protection&templateURL=https://vulnerabilitytestbucket.s3.amazonaws.com/c1ns-inspector-findings-template.yaml)
+[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1ns-inspector-findings-protection&templateURL=https://cloudone-community.s3.amazonaws.com/latest/Network-Security/Integration/aws-python-amazon-inspector-integration/c1ns-inspector-findings-template.yaml)
 
 
 Pre-Requisites
