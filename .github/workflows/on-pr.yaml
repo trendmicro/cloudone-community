@@ -4,7 +4,9 @@ env:
   BUCKET_NAME: 'cloudone-community'
   AWS_REGION: 'us-east-1'
 
-on: pull_request
+on:
+  pull_request_target:
+    types: [assigned, opened, synchronize, reopened]
 
 jobs:
   sync-files:
