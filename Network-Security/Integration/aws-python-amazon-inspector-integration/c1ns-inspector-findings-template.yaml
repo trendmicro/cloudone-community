@@ -493,7 +493,7 @@ Resources:
 
 
             ######################################## Uncomment the following if you running on your local machine
-            lambda_handler(None, None)
+            # lambda_handler(None, None)
 
       FunctionName: "FindingsReportLambda"
       Handler: "index.lambda_handler"
@@ -916,7 +916,8 @@ Resources:
                                         Payload=lambda_payload)
                 print('triggered findings report lambda function') 
 
-
+            ######################################## Uncomment the following if you running on your local machine
+            # lambda_handler(None, None)
       FunctionName: "PolicyUpdateLambda"
       Handler: "index.lambda_handler"
       Runtime: python3.9
