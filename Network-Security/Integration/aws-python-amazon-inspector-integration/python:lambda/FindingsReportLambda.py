@@ -35,6 +35,10 @@ HEADERS = {"api-version": API_VERSION, "Authorization": f"ApiKey {new_api_format
 inspector = boto3.client("inspector2", region_name="us-east-1")
 # Create a new SES resource and specify a region.
 ses = boto3.client("ses", region_name=AWS_REGION)
+sts = boto3.client("sts")
+
+def get_account_id():
+    return sts.get_caller_identity()["Account"]
 
 def send_email(sender, recipients, subject, html_body, attachment_details):
     print("sending email ...")
@@ -221,7 +225,7 @@ def lambda_handler(event, context):
     tmp_csv_file_unprotected_cves.seek(0)
 
     # The subject line for the email.
-    subject = "Vulnerability Report (CVEs) from Cloud One Network Security"
+    subject = f"Vulnerability Report (CVEs) from Cloud One Network Security - {get_account_id()}, {AWS_REGION}"
 
     unprotected_cves_html = '<table border="1">' + "\n"
     # write headers

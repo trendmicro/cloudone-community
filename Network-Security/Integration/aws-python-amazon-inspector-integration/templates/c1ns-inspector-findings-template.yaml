@@ -237,7 +237,7 @@ Resources:
             # API_KEY = "Your ApiKey"
             # HOST = "https://network.us-1.cloudone.trendmicro.com/api/policies/"
 
-            secrets = boto3.client('secretsmanager').get_secret_value(SecretId=API_KEY)
+            secrets = boto3.client("secretsmanager").get_secret_value(SecretId=API_KEY)
             sm_data = json.loads(secrets["SecretString"])
             new_api_format = sm_data["ApiKey"]
             HEADERS = {"api-version": API_VERSION, "Authorization": f"ApiKey {new_api_format}"}
@@ -245,6 +245,12 @@ Resources:
             inspector = boto3.client("inspector2", region_name="us-east-1")
             # Create a new SES resource and specify a region.
             ses = boto3.client("ses", region_name=AWS_REGION)
+            sts = boto3.client("sts")
+
+
+            def get_account_id():
+                return sts.get_caller_identity()["Account"]
+
 
             def send_email(sender, recipients, subject, html_body, attachment_details):
                 print("sending email ...")
@@ -255,7 +261,7 @@ Resources:
 
                 msg["To"] = recipients
                 msg["From"] = sender
-                msg["Subject"] = subject ##
+                msg["Subject"] = subject  ##
 
                 for item in attachment_details:
                     filename = item["filename"]
@@ -359,9 +365,9 @@ Resources:
             def get_all_policies(all_policies=[], next_token=None, limit=1000):
                 params = {"limit": limit}
                 if next_token:
-                    params['cursor'] = next_token
+                    params["cursor"] = next_token
                 # use the 'headers' parameter to set the HTTP headers:
-                req = Request(HOST + '?' + urlencode(params))
+                req = Request(HOST + "?" + urlencode(params))
                 for item in HEADERS.items():
                     req.add_header(item[0], item[1])
                 response = json.loads(urlopen(req).read())
@@ -384,7 +390,7 @@ Resources:
                                 "name": policy["name"],
                                 "severity": policy["severity"],
                                 "cve": ref["value"],
-                                "uuid": policy["uuid"]
+                                "uuid": policy["uuid"],
                             }
                             policies_with_cves.append(policy_details)
                 print("policies with cve count = ", len(policies_with_cves))
@@ -392,7 +398,6 @@ Resources:
 
 
             def lambda_handler(event, context):
-
                 # findings = filter_findings_with_cves(findings_from_inspector(inspector))
                 policies = filter_policies_with_cves(get_all_policies())
 
@@ -411,7 +416,7 @@ Resources:
                                 print(
                                     f"foung policy for {cve} on instance {instance_name} - {policy}"
                                 )
-                                print (policy)
+                                print(policy)
                                 csv_rows_found_policies.append(
                                     [instance_id, instance_name, cve, policy["name"]]
                                 )
@@ -431,7 +436,7 @@ Resources:
                 tmp_csv_file_unprotected_cves.seek(0)
 
                 # The subject line for the email.
-                subject = "Vulnerability Report (CVEs) from Cloud One Network Security"
+                subject = f"Vulnerability Report (CVEs) from Cloud One Network Security - {get_account_id()}, {AWS_REGION}"
 
                 unprotected_cves_html = '<table border="1">' + "\n"
                 # write headers
@@ -449,7 +454,12 @@ Resources:
 
                 tmp_csv_file_found_policies = TemporaryFile(mode="w+", newline="")
                 writer = csv.writer(tmp_csv_file_found_policies)
-                csv_header_found_policies = ["instance_id", "instance name", "cve", "Intrusion Prevention Filtering"]
+                csv_header_found_policies = [
+                    "instance_id",
+                    "instance name",
+                    "cve",
+                    "Intrusion Prevention Filtering",
+                ]
                 writer.writerow(csv_header_found_policies)
                 for row in csv_rows_found_policies:
                     writer.writerow(row)
@@ -496,7 +506,7 @@ Resources:
                             "attachment": tmp_csv_file_found_policies,
                         },
                     ],
-                )   
+                )
       FunctionName: "FindingsReportLambda"
       Handler: "index.lambda_handler"
       Runtime: python3.9
@@ -562,6 +572,12 @@ Resources:
             # Create a new SES resource and specify a region.
             ses = boto3.client("ses", region_name=AWS_REGION)
             lambda_client = boto3.client('lambda')
+            sts = boto3.client("sts")
+
+
+            def get_account_id():
+                return sts.get_caller_identity()["Account"]
+
 
             def send_email(sender, recipients, subject, html_body, attachment_details=None):
                 if not attachment_details:
@@ -858,7 +874,7 @@ Resources:
 
 
                 # The subject line for the email.
-                subject = "Intrusion Prevention Filtering Update from Network Security"
+                subject = f"Intrusion Prevention Filtering Update from Network Security - {get_account_id()}, {AWS_REGION}"
 
                 # check if any intrusion prevention filters were updated or not and send email
                 no_filters_to_update_html_body = '<p>No Intrusion Prevention Filters to update</p>'
@@ -925,8 +941,7 @@ Resources:
                 lambda_client.invoke(FunctionName=FINDINGS_REPORT_LAMBDA_FUNCTION, 
                                         InvocationType='Event',
                                         Payload=lambda_payload)
-                print('triggered findings report lambda function') 
-                
+                print('triggered findings report lambda function')  
       FunctionName: "PolicyUpdateLambda"
       Handler: "index.lambda_handler"
       Runtime: python3.9

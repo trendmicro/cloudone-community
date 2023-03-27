@@ -41,6 +41,12 @@ inspector = boto3.client("inspector2", region_name="us-east-1")
 # Create a new SES resource and specify a region.
 ses = boto3.client("ses", region_name=AWS_REGION)
 lambda_client = boto3.client('lambda')
+sts = boto3.client("sts")
+
+
+def get_account_id():
+    return sts.get_caller_identity()["Account"]
+
 
 def send_email(sender, recipients, subject, html_body, attachment_details=None):
     if not attachment_details:
@@ -337,7 +343,7 @@ def lambda_handler(event, context):
 
 
     # The subject line for the email.
-    subject = "Intrusion Prevention Filtering Update from Network Security"
+    subject = f"Intrusion Prevention Filtering Update from Network Security - {get_account_id()}, {AWS_REGION}"
 
     # check if any intrusion prevention filters were updated or not and send email
     no_filters_to_update_html_body = '<p>No Intrusion Prevention Filters to update</p>'
