@@ -4,7 +4,7 @@ This script will deploy a lambda function that will auto update Cloud One Networ
 
 Click the below to launch the CloudFormation template.
 
-[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1ns-CVEs-Integration-template&templateURL=https://cloudone-community.s3.amazonaws.com/latest/Network-Security/Integration/aws-python-amazon-S3-CVEs-integration/c1ns-policy-update-s3-cve-template.yaml)
+[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1ns-CVEs-Integration-template&templateURL=https://cloudone-community.s3.us-east-1.amazonaws.com/latest/Common/Cloud-Account/aws-python-amazon-S3-CVEs-integration/templates/c1ns-policy-update-s3-cve-template.yaml)
 
 
 ## Prerequisites
