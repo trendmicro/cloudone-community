@@ -1,7 +1,7 @@
 # Cloud One Workload Security Integration with Amazon Inspector.
 
 This script will deploy two lambda functions, one will run a report of vulnerabilities from EC2 instances that Amazon Inspector detects and match them against Trend Micro IPS rules. The second Lambda function will assign thoses rules or virtual patches to protect workloads against [CVE](https://www.cve.org/About/Overview)’s automattically as Amazon Inspector detects them. 
-    > **Key:** In this case Amazon Inspector is acting as IDS (Intrusion Detection Service) and Trend Micro Cloud One Workload Security is acting as IPS (Intrusion Protection Service).
+    > **Key:** In this case Amazon Inspector as vulnerability scanner and Trend Micro Cloud One Workload Security is acting as IPS (Intrusion Protection Service).
 
 Click the below to launch the CloudFormation template.
 
