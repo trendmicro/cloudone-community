@@ -5,7 +5,7 @@ This script will deploy two lambda functions, one will run a report of vulnerabi
 
 Click the below to launch the CloudFormation template.
 
-[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1ws-inspector-findings-protection&templateURL=https://cloudone-community.s3.amazonaws.com/latest/Workload-Security/Integration/aws-python-amazon-inspector-integration/c1ws-inspector-findings-template.yaml) 
+[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1ws-inspector-findings-protection&templateURL=https://cloudone-community.s3.us-east-1.amazonaws.com/latest/Workload-Security/Integration/aws-python-amazon-inspector-integration/templates/c1ws-inspector-findings-template.yaml) 
 
 
 
