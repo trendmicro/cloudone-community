@@ -16,5 +16,5 @@ Click the below to launch the CloudFormation template.
 3. Generate the [API Key](https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/) from Cloud One
 
 4. Have an existing S3 bucket where the CVEs are uploaded or create new S3 bucket. In case you do not have any existing bucket the template will create a new bucket for you.
-    > **NOTE:** Make sure the existing bucket does not have Event notification attached to other lambda function.
+    > **NOTE:** Make sure the existing bucket does not have Event notification attached to other lambda functions.
                 Make sure the new bucket has a unique name.
