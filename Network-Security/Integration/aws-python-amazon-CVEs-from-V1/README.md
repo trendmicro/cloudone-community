@@ -23,7 +23,6 @@ Click the below to launch the CloudFormation template.
 6. Generate the [Vision One Token](https://docs.trendmicro.com/en-us/enterprise/trend-micro-xdr-help/ObtainingAPIKeys) from Vision One console.
 
 
-
 ## Purpose and Objective
 
 The goal of this integration is to be able to automate the update of the appropriate intrusion prevention  filters in the policy to (mitigate the HIGHLY-EXPLOITABLE UNIQUE CVEs from Vision One) enforced this protection.
