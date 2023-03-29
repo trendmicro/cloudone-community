@@ -4,6 +4,7 @@ This script will deploy a lambda function that will auto update Cloud One Networ
 
 Click the below to launch the CloudFormation template.
 
+
 [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1ns-CVEs-Integration-template&templateURL=https://cloudone-community.s3.us-east-1.amazonaws.com/latest/Network-Security/Integration/aws-python-amazon-S3-CVEs-integration/templates/c1ns-policy-update-s3-cve-template.yaml)
 
 
@@ -16,5 +17,7 @@ Click the below to launch the CloudFormation template.
 3. Generate the [API Key](https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/) from Cloud One
 
 4. Have an existing S3 bucket where the CVEs are uploaded or create new S3 bucket. In case you do not have any existing bucket the template will create a new bucket for you.
+
     > **NOTE:** Make sure the existing bucket does not have Event notification attached to other lambda functions.
+
                 Make sure the new bucket has a unique name.
