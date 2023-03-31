@@ -49,7 +49,6 @@ Resources:
                         }
 
                         http = urllib3.PoolManager()
-                        print(headers)
                         print(url)
                         response = http.request("GET", url=url, headers=headers)
                         print(response)
