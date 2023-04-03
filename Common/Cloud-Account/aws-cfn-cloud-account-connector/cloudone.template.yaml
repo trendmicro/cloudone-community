@@ -64,26 +64,28 @@ Resources:
                   response_data = {}
                   physicalResourceId = None
                   try:
+
+                      cloudOneRoleArn = os.environ['CloudOneRoleArn']
+                      cloudOneRegion = os.environ['CloudOneRegion']
+                      cloudOneApiKey = os.environ['CloudOneApiKey']
+
+                      headers = {
+                        'api-version': 'v1',
+                        'Authorization': 'ApiKey '+cloudOneApiKey+'',
+                        'Content-Type': 'application/json'
+                      }
+
+                      http = urllib3.PoolManager()
+                      
                       
                       if event["RequestType"] == "Create" or event["RequestType"] == "Update":
-                        cloudOneRoleArn = os.environ['CloudOneRoleArn']
-                        cloudOneRegion = os.environ['CloudOneRegion']
-                        cloudOneApiKey = os.environ['CloudOneApiKey']
-
+                        
                         url = 'https://cloudaccounts.'+cloudOneRegion+'.cloudone.trendmicro.com/api/cloudaccounts/aws'
 
                         payload = json.dumps({
                           'roleARN': cloudOneRoleArn
                         })
-                        headers = {
-                          'api-version': 'v1',
-                          'Authorization': 'ApiKey '+cloudOneApiKey+'',
-                          'Content-Type': 'application/json'
-                        }
-
-                        http = urllib3.PoolManager()
                         encoded_payload = payload.encode("utf-8")
-                        print(headers)
                         print(url)
                         response = http.request("POST", url=url, headers=headers, body=encoded_payload)
                         print(response)
@@ -93,8 +95,14 @@ Resources:
                         response_data = {"ID": response_json_data["id"]}
 
                       else: # if event["RequestType"] == "Delete":
-                        physicalResourceId = event["PhysicalResourceId"]
+                        id = event["PhysicalResourceId"]
 
+                        url = 'https://cloudaccounts.'+cloudOneRegion+'.cloudone.trendmicro.com/api/cloudaccounts/aws/' + id
+
+                        print(url)
+                        response = http.request("DELETE", url=url, headers=headers)
+                        print(response)
+                        
                   except Exception as e:
                     print(e)
                     status = cfnresponse.FAILED
