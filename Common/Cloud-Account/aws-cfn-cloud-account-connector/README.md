@@ -18,7 +18,6 @@ To fully integrate an AWS account in Cloud One, you must deploy resources in you
 - Have an API Key for a [Cloud One](https://www.trendmicro.com/cloudone) account. Click [here](https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/#new-api-key) for a guide on how to generate an API Key.
 - An AWS Account with Admin permissions
 - Generate a Vision One Enrollment Token. See step #1 in [this documentation](https://docs.trendmicro.com/en-us/enterprise/trend-micro-xdr-help/ConfiguringCloudOneWorkloadSecurity).
-- An S3 Bucket that's already configured as a destination for a Trail.
 
 ## Limitations
 
@@ -35,6 +34,31 @@ To fully integrate an AWS account in Cloud One, you must deploy resources in you
 | jp-1              | ap-northeast-1  |
 | sg-1              | ap-southeast-1  |
 | ca-1              | ca-central-1    |
+
+## Parameters
+
+### Required
+
+- CloudOneApiKey
+  - Description: Cloud One API Key. See Requirements above for more details.
+- VisionOneServiceToken
+  - Description: Vision One Service Token. See Requirements above for more details.
+- CreateNewTrail:
+  - Description: Decides if a new Trail should be created. Defaults to False, so you must enter a S3 Bucket name in the ExistingCloudtrailBucketName parameter. In case you pick True, a new trail and bucket will be created for you. Setting this to True will incur in extra costs.
+- ExistingCloudtrailBucketName:
+  - Description: Specify the name of an existing bucket that you want to use for forwarding to Trend Micro Cloud One. Only used if CreateNewTrail is set to False.
+
+### Shouldn't be Changed from Default
+
+These are going to be changed in case you decide to host the templates yourself. `QSS3BucketName` should be the bucket name that you host these templates from and `QSS3KeyPrefix` would be the key prefix/path of the root "folder" for these templates. Example: If the files are hosted in the bucket named `my-bucket` and inside the folder `trendmicro/onboarding`, `QSS3BucketName` value should be `my-bucket` and `QSS3KeyPrefix` value should be `trendmicro/onboarding`.
+
+- QSS3BucketName:
+  - Default: cloudone-community
+  - Description: S3 bucket name for the deployment assets. Deployment bucket name
+    can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+- QSS3KeyPrefix:
+  - Default: ""
+  - Description: S3 key prefix for the Deployment assets. Deployment key prefix can include numbers, lowercase letters uppercase letters, hyphens (-), dots(.) and forward slash (/).
 
 ## Deployment
 
@@ -53,3 +77,7 @@ export APIKEY="your-cloudone-apikey"
 export TOKEN="your-visionone-enrollment-token"
 aws cloudformation create-stack --stack-name common-onboard-test --template-url https://cloudone-community.s3.us-east-1.amazonaws.com/latest/Common/Cloud-Account/aws-cfn-cloud-account-connector/main.template.yaml --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --parameters ParameterKey=ExistingCloudtrailBucketName,ParameterValue=$BUCKET ParameterKey=CloudOneApiKey,ParameterValue=$APIKEY ParameterKey=VisionOneServiceToken,ParameterValue=$TOKEN ParameterKey=QSS3KeyPrefix,ParameterValue=$HASH/
 ```
+
+## Removal or Deployment Failure
+
+If one decides to remove this stack, or if it fails during deployment, all modifications made by it, including any kind of account integration, will be reverted back to its pre-deployment state. The only exception is in the Vision One side. The manually created token needs to be deleted manually as well, otherwise the Cloud One account will remain enrolled to the Vision One account.
