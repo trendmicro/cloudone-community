@@ -209,8 +209,4 @@ def lambda_handler(event, context):
 
 
 ######################################## Uncomment the following if you running on your local machine
-test_event = {
-    "resources": ["i-097e06e3e6570246c", "i-0a968b3fe2ceae37b"],
-    "detail": {"title": "CVE-2021-43267"},
-}
-lambda_handler(test_event, None)
+# lambda_handler(test_event, None)
