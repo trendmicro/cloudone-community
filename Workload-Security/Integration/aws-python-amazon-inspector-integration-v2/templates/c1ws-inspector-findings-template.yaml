@@ -1,0 +1,727 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  BucketName:
+    Type: String
+    Description: S3 bucket where the csv file report will be uploaded (If you are using an existing bucket then input the name of your bucket if not then choose a unique bucket name)
+  CreateNewBucket:
+    Type: String
+    AllowedValues:
+      - 'Yes'
+      - 'No'
+    Description: >-
+      Are you creating a new bucket for the reports?
+  AutoAssignFileName:
+    Type: String
+    Description: Name the csv file that contains the rule assignment report
+    Default: ips_rule_auto_assign_report.csv
+  VulnerabilityReportFileName:
+    Type: String
+    Description: Name the csv file that contains the Vulnerability report
+    Default: inspector_vulnerability_report.csv
+  EventBridgeRuleName:
+    Type: String
+    Default: inspector-finding
+    Description: Name of the Event Bridge
+  NotifySeverities:
+    Type: CommaDelimitedList
+    Default: HIGH, CRITICAL
+    Description: Enter the severities of the findings you want to be notify about (All in Capital letter)
+  TopicArn: 
+    Type: String
+    Description: Enter the arn of your existing SNS topic
+  AwsRegion:
+    Type: String
+    Description: Please enter the region in which the lambda will be executed
+    Default : us-east-1
+    AllowedValues:
+      - us-east-1
+      - us-east-2	
+      - us-east-1	
+      - us-west-1	
+      - us-west-2
+      - af-south-1
+      - ap-east-1
+      - ap-southeast-3
+      - ap-south-1
+      - ap-northeast-3
+      - ap-northeast-2
+      - ap-southeast-1
+      - ap-southeast-2
+      - ap-northeast-1
+      - ca-central-1
+      - eu-central-1
+      - eu-west-1
+      - eu-west-2
+      - eu-south-1
+      - eu-west-3
+      - eu-north-1
+      - me-south-1
+      - me-central-1
+      - sa-east-1
+  CloudOneRegion:
+    Type: String
+    Description: Enter your Cloud One Region
+    Default: us-1
+    AllowedValues:
+      - trend-us-1
+      - us-1
+      - in-1
+      - gb-1
+      - jp-1
+      - de-1
+      - au-1
+      - ca-1
+      - sg-1
+  ApiKey:
+    Type: String
+    NoEcho: "true"
+    Description: Please enter your Cloud One API Key
+  CronSchedule:
+    Type: String
+    Description: Schedule the time you would like to run the vulnerabiliy report using the cron format (Default is every wednesday)
+    Default: cron(0 12 ? * WED *)
+
+Conditions:
+  CreateBucket:
+    !Equals [!Ref CreateNewBucket, "Yes"]
+
+Resources:
+  #   This secret holds the Trend Micro Cloud One API key.
+  ApiKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: "TrendMicro/CloudOne/ApiKey"
+      SecretString: !Sub |
+        {
+          "ApiKey": "${ApiKey}"
+        }
+  Bucket:
+    Type: AWS::S3::Bucket
+    Condition: CreateBucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Ref BucketName
+  LambdaSecretAcessPolicy: 
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - "secretsmanager:GetSecretValue"
+          - "secretsmanager:DescribeSecret"
+          - "sts:AssumeRole"
+          Resource: !Ref ApiKeySecret
+  IpsRuleAutoAssignLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/AmazonVPCCrossAccountNetworkInterfaceOperations
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+          - arn:aws:iam::aws:policy/AmazonInspector2ReadOnlyAccess
+          - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+          - !Ref LambdaSecretAcessPolicy
+      Path: /
+      Policies:
+        - PolicyName: SendCommandPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:SendCommand
+                Resource: "*"
+        - PolicyName: SnsNotificationPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: sns:Publish
+                Resource: !Ref TopicArn
+        - PolicyName: S3WritePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub 'arn:aws:s3:::${BucketName}/*'
+  IpsRuleAutoAssignLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      MemorySize: 128
+      Runtime: python3.9
+      Timeout: 60
+      Environment:
+        Variables:
+          cloudoneregion: !Ref CloudOneRegion
+          c1_api_key: !Ref ApiKeySecret
+          bucket_name: !Ref BucketName
+          topic_arn: !Ref TopicArn
+          csv_filename: !Ref AutoAssignFileName
+          aws_region: !Ref AwsRegion
+      Role: !GetAtt IpsRuleAutoAssignLambdaRole.Arn
+      Code:
+        ZipFile: |
+            import os
+            import csv
+            import json
+            from copy import deepcopy
+            from urllib.request import Request, urlopen
+            import boto3
+
+
+            API_VERSION = "v1"
+            TOPIC_ARN = os.environ.get('topic_arn')
+            AWS_REGION = os.environ.get("aws_region")
+            BUCKET_NAME = os.environ.get("bucket_name")
+            FILE_NAME = os.environ.get("csv_filename")
+            C1_API_KEY = os.environ.get("c1_api_key")
+            HOST = (
+                f"https://workload.{os.environ.get('cloudoneregion')}.cloudone.trendmicro.com/api"
+            )
+
+            # get secret
+            secrets = boto3.client("secretsmanager").get_secret_value(SecretId=C1_API_KEY)
+            sm_data = json.loads(secrets["SecretString"])
+            api_key = sm_data["ApiKey"]
+
+
+            ######################################## Uncomment the following if you running on your local machine and comment the above 7 lines
+            # API_VERSION = "v1"
+            # AWS_REGION = "us-east-1"  ##You can input the aws region you want here
+            # BUCKET_NAME = "YOUR BUCKET NAME"
+            # FILE_NAME = "ips_rule_auto_assign_report.csv" # You can put the name of the file you want
+            # TOPIC_ARN = "arn:aws:sns:us-east-1:123456789012:test" # Your SNS Topic arn
+            # HOST = "https://workload.trend-us-1.cloudone.trendmicro.com/api"  # Your Cloud One host URL, make sure you use the right Cloud One Region
+            # api_key = "YOUR CLOUD ONE API KEY"
+            ############################################## END OF TEST CODE ############################################################
+
+            HEADERS = {
+                "Authorization": f"ApiKey {api_key}",
+                "api-version": API_VERSION,
+                "Content-Type": "application/json",
+            }
+
+            inspector = boto3.client("inspector2", AWS_REGION)
+            sts = boto3.client("sts")
+            sns = boto3.client("sns")
+            s3 = boto3.client("s3")
+
+
+            def get_response(url, headers=None, method="GET", data=None):
+                if data:
+                    data = json.dumps(data)
+                    # Convert to String
+                    data = str(data)
+                    # Convert string to byte
+                    data = data.encode("utf-8")
+                    # Post Method is being invoked if data != None
+                    req = Request(url, method=method, data=data)
+                else:
+                    req = Request(url)
+                if headers:
+                    for item in headers.items():
+                        req.add_header(item[0], item[1])
+                # Response
+                response = json.loads(urlopen(req).read())
+                return response
+
+
+            def add_ips_rule_to_specific_computer(rule_ids, computer_id):
+                print("computer id:", computer_id)
+                print("rule_ids", rule_ids)
+                req_url = f"{HOST}/computers/{computer_id}/intrusionprevention/assignments"
+                data = {"ruleIDs": rule_ids}
+                res = get_response(url=req_url, headers=HEADERS, method="POST", data=data)
+                return res
+
+
+            def ips_rules_from_cve_number(cve_number):
+                req_url = f"{HOST}/intrusionpreventionrules/search"
+                data = {
+                    "searchCriteria": [
+                        {"fieldName": "CVE", "stringTest": "equal", "stringValue": cve_number}
+                    ]
+                }
+                res = get_response(url=req_url, headers=HEADERS, method="POST", data=data)
+                rules = res["intrusionPreventionRules"]
+                # for rule in rules:
+                #    print(rule["name"])
+                #    print(rule["ID"])
+                return rules
+
+
+            def get_specific_dsa_info_from_instance_id(instance_id):
+                # Get DSA information for a specific instance ID
+                req_url = f"{HOST}/computers"
+                res = get_response(req_url, headers=HEADERS)
+                computers = res["computers"]
+                target_dsa = ""
+                for computer in computers:
+                    aws_info = computer.get(
+                        "ec2VirtualMachineSummary", computer.get("noConnectorVirtualMachineSummary")
+                    )
+                    # print("HostName: {}".format(computer.get("hostName")))
+                    # print("ID: {}".format(computer.get("ID")))
+                    # print("displayName: {}".format(computer.get("displayName")))
+
+                    if aws_info:
+                        # print("InstanceID: {}".format(aws_info.get("instanceID")))
+                        if aws_info.get("instanceID") == instance_id:
+                            target_dsa = computer
+                return target_dsa
+
+
+            def send_sns(topic_arn, subject, message):
+                response = sns.publish(
+                    TargetArn=topic_arn,
+                    Subject=subject,
+                    Message=message,
+                    #   MessageStructure = 'json'
+                )
+
+                return response
+
+
+            def lambda_handler(event, context):
+                # print event for debug
+                print("received event:", event)
+
+                instance_ids = event["resources"]
+                cve_number = event["detail"]["title"]
+                rules = ips_rules_from_cve_number(cve_number)  # CVE
+
+                if rules:
+                    computers = []
+                    non_agents = []
+                    for instance_id in instance_ids:
+                        computer = get_specific_dsa_info_from_instance_id(instance_id)
+                        if computer:
+                            computers.append(computer)
+                        else:
+                            non_agents.append(instance_id)
+
+                    if computers:
+                        computers_updated = []
+                        for computer in computers:
+                            computer_id = computer["ID"]
+                            print("------------------------------------------------------")
+                            print("computer id;", computer_id)
+                            computer_assigned_ips_rules = computer.get(
+                                "intrusionPrevention", {}
+                            ).get("ruleIDs", [])
+                            print("computer_assigned_ips_rules:", len(computer_assigned_ips_rules))
+
+                            not_assigned_rules = deepcopy(rules)
+                            print("rules:", len(rules))
+                            for rule in rules:
+                                if rule["ID"] in computer_assigned_ips_rules:
+                                    not_assigned_rules.remove(rule)
+                            print("not_assigned_rules:", len(not_assigned_rules))
+
+                            if not not_assigned_rules:
+                                print("Already assigned target rules!")
+                                continue
+                            print(
+                                add_ips_rule_to_specific_computer(
+                                    rule_ids=[rule["ID"] for rule in not_assigned_rules],
+                                    computer_id=computer_id,
+                                )
+                            )
+                            print(f"Added target rules to computer - {computer.get('displayName')}")
+                            computers_updated.append(computer)
+                        if computers_updated:
+                            file_data = [
+                                [
+                                    "Account Id",
+                                    "Instance Id",
+                                    "CVE",
+                                    "IPS Rule",
+                                ],
+                            ]
+                            for computer in computers_updated:
+                                for rule in not_assigned_rules:
+                                    file_data.extend(
+                                        [
+                                            [
+                                                computer["ec2VirtualMachineSummary"]["accountID"],
+                                                computer["ec2VirtualMachineSummary"]["instanceID"],
+                                                cve_number,
+                                                f'{rule["identifier"]} - {rule["name"]}',
+                                            ]
+                                        ]
+                                    )
+
+                            with open("/tmp/" + FILE_NAME, "w", newline="") as file:
+                                writer = csv.writer(file)
+                                writer.writerows(file_data)
+
+                            s3.upload_file("/tmp/" + FILE_NAME, BUCKET_NAME, FILE_NAME)
+                            message = f'IPS Rules assigned to {len(computers_updated)} instances for {cve_number}, for more details check "{FILE_NAME}" on "{BUCKET_NAME}" bucket'
+                        else:
+                            message = f"Already assigned rules to computers for {cve_number}"
+                    else:
+                        print("No computers found, skipping agents")
+                        message = f"No computers found for {cve_number}"
+                else:
+                    print("Not found Corresponding Filter. CVE: {}".format(cve_number))
+                    message = f"No coreesponding rule found for {cve_number}"
+
+                subject = "Auto remediation for CVEs from Inspector"
+                print("sendig sns...")
+                send_sns(topic_arn=TOPIC_ARN, subject=subject, message=message)
+
+
+            ######################################## Uncomment the following if you running on your local machine
+            # test_event = {
+            #     "resources": ["i-097e06e3e6570246c", "i-0a968b3fe2ceae37b"],
+            #     "detail": {"title": "CVE-2021-43267"},
+            # }
+            # lambda_handler(test_event, None)
+
+  EventBridgeRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Ref EventBridgeRuleName
+      EventPattern:
+        source: ["aws.inspector2"]
+        detail-type: ["Inspector2 Finding"]
+        detail:
+          status: ["ACTIVE"]
+          severity: !Ref NotifySeverities
+          resources:
+            type: ["AWS_EC2_INSTANCE"]
+      Targets:
+        - Arn: !GetAtt IpsRuleAutoAssignLambda.Arn
+          Id: lambda
+
+  InspectorEvent:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt IpsRuleAutoAssignLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt EventBridgeRule.Arn
+
+  VulnerabilityReportLambda:
+    Type: AWS::Lambda::Function
+    Description: >
+      This Function send out the report of which ips rule that can protect cves found in Inspector findings
+    Properties:
+      Handler: index.lambda_handler
+      MemorySize: 128
+      Runtime: python3.9
+      Timeout: 60
+      Environment:
+        Variables:
+          cloudoneregion: !Ref CloudOneRegion
+          c1_api_key: !Ref ApiKeySecret
+          bucket_name : !Ref BucketName
+          topic_arn: !Ref TopicArn
+          csv_filename: !Ref VulnerabilityReportFileName
+          aws_region: !Ref AwsRegion
+      Role: !GetAtt IpsRuleAutoAssignLambdaRole.Arn
+      Code:
+        ZipFile: |
+            from __future__ import print_function
+            import os
+            import json
+            import csv
+            import sys, warnings
+            import boto3
+            from pprint import pprint
+            from tempfile import TemporaryFile
+            from urllib.request import Request, urlopen
+            from urllib.parse import urlencode
+
+
+            API_VERSION = "v1"
+            TOPIC_ARN = os.environ.get('topic_arn')
+            AWS_REGION = os.environ.get("aws_region")
+            BUCKET_NAME = os.environ.get("bucket_name")
+            FILE_NAME = os.environ.get("csv_filename")
+            C1_API_KEY = os.environ.get("c1_api_key")
+            HOST = (
+                f"https://workload.{os.environ.get('cloudoneregion')}.cloudone.trendmicro.com/api"
+            )
+
+            # get secret
+            secrets = boto3.client("secretsmanager").get_secret_value(SecretId=C1_API_KEY)
+            sm_data = json.loads(secrets["SecretString"])
+            api_key = sm_data["ApiKey"]
+
+
+            ######################################## Uncomment the following if you running on your local machine and comment the above 7 lines
+            # API_VERSION = "v1"
+            # AWS_REGION = "us-east-1"  ##You can input the aws region you want here
+            # BUCKET_NAME = "YOUR BUCKET NAME"
+            # FILE_NAME = "vulnerability_report.csv" # You can put the name of the file you want
+            # TOPIC_ARN = "arn:aws:sns:us-east-1:123456789012:test" # Your SNS Topic arn
+            # HOST = "https://workload.trend-us-1.cloudone.trendmicro.com/api"  # Your Cloud One host URL, make sure you use the right Cloud One Region
+            # api_key = "YOUR CLOUD ONE API KEY"
+            ############################################## END OF TEST CODE ############################################################
+
+            HEADERS = {
+                "Authorization": f"ApiKey {api_key}",
+                "api-version": API_VERSION,
+                "Content-Type": "application/json",
+            }
+
+            inspector = boto3.client("inspector2", AWS_REGION)
+            sts = boto3.client("sts")
+            sns = boto3.client("sns")
+            s3 = boto3.client("s3")
+
+
+            def send_sns(topic_arn, subject, message):
+                response = sns.publish(
+                    TargetArn=topic_arn,
+                    Subject=subject,
+                    Message=message,
+                    #   MessageStructure = 'json'
+                )
+
+                return response
+
+
+            def get_response(url, query_parameters=None, headers=None, method="GET", data=None):
+                if query_parameters:
+                    url += f"?{urlencode(query_parameters)}"
+                    print("formed url:", url)
+                if data:
+                    data = json.dumps(data)
+                    # Convert to String
+                    data = str(data)
+                    # Convert string to byte
+                    data = data.encode("utf-8")
+                    # Post/Put Method is being invoked if data != None
+                    req = Request(url, method=method, data=data)
+                else:
+                    req = Request(url)
+                if headers:
+                    for item in headers.items():
+                        req.add_header(item[0], item[1])
+                # Response
+                response = json.loads(urlopen(req).read())
+                return response
+
+
+            def cves_from_instance(instance_id, inspector):
+                cves = list()
+                result = list()
+                print("<<<<<<< checking instance id:", instance_id)
+                resp = inspector.list_findings(
+                    filterCriteria={
+                        "findingStatus": [{"comparison": "EQUALS", "value": "ACTIVE"}],
+                        "resourceId": [{"comparison": "EQUALS", "value": instance_id}],
+                    }
+                )
+                result.extend(resp["findings"])
+                next_token = resp.get("nextToken")
+                while next_token:
+                    resp = inspector.list_findings(
+                        filterCriteria={
+                            "findingStatus": [{"comparison": "EQUALS", "value": "ACTIVE"}],
+                            "resourceId": [{"comparison": "EQUALS", "value": instance_id}],
+                        },
+                        nextToken=next_token,
+                    )
+                    result.extend(resp["findings"])
+                    next_token = resp.get("nextToken")
+                for finding in result:
+                    cve = finding.get("packageVulnerabilityDetails", {}).get("vulnerabilityId")
+                    if cve:
+                        cves.append(cve)
+                    # print(cve)
+                return cves
+
+
+            def all_instances_details_from_inspector(inspector):
+                instances = list()
+                result = list()
+                findings = inspector.list_finding_aggregations(
+                    aggregationType="AWS_EC2_INSTANCE",
+                )
+                result.extend(findings["responses"])
+                next_token = findings.get("nextToken")
+                while next_token:
+                    findings = inspector.list_finding_aggregations(
+                        aggregationType="AWS_EC2_INSTANCE",
+                        nextToken=next_token,
+                    )
+                    result.extend(findings["responses"])
+                    next_token = findings.get("nextToken")
+                for finding in result:
+                    instance_details = {
+                        "id": finding["ec2InstanceAggregation"]["instanceId"],
+                        "name": finding["ec2InstanceAggregation"]
+                        .get("instanceTags", {})
+                        .get("Name"),
+                        "account_id": finding["ec2InstanceAggregation"]["accountId"],
+                    }
+                    instances.append(instance_details)
+                print("Found total instances =", len(instances))
+                return instances
+
+
+            def get_computer_from_instance_id(instance_id):
+                search_criteria = {
+                    "fieldName": "ec2VirtualMachineSummary/instanceID",
+                    "stringTest": "equal",
+                    "stringValue": instance_id,
+                }
+                payload = {
+                    "searchCriteria": [search_criteria],
+                }
+                query_parameters = {"expand": "all"}
+                computers_api = f"{HOST}/computers/search"
+                response = get_response(
+                    url=computers_api,
+                    query_parameters=query_parameters,
+                    headers=HEADERS,
+                    method="POST",
+                    data=payload,
+                )
+                computers = response["computers"]
+                if computers:
+                    return computers[0]
+
+
+            def lambda_handler(event, context):
+                csv_rows = list()
+                all_instance_details = all_instances_details_from_inspector(inspector)
+                for instance_details in all_instance_details:
+                    instance_id = instance_details["id"]
+                    instance_name = instance_details["name"]
+                    account_id = instance_details["account_id"]
+                    print(instance_name, instance_id)
+                    this_instance_cves = cves_from_instance(instance_id, inspector)
+                    print("inspector cves", len(this_instance_cves))
+
+                    computer = get_computer_from_instance_id(instance_id)
+                    if not computer:
+                        print(f"No computer found for instance id: {instance_id}")
+                        continue
+                    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   id", computer["ID"])
+                    if computer.get("intrusionPrevention", {}).get("ruleIDs"):
+                        cves_protected_by_rules = []
+                        for ipr_id in computer["intrusionPrevention"]["ruleIDs"]:
+                            print(">>>>>>>>> checking rule id:", ipr_id)
+                            describe_ips_url = f"{HOST}/computers/{computer['ID']}/intrusionprevention/rules/{ipr_id}"
+                            ipr = get_response(url=describe_ips_url, headers=HEADERS)
+
+                            if ipr.get("CVE"):
+                                for cve in ipr["CVE"]:
+                                    if cve in this_instance_cves:
+                                        print(
+                                            account_id,
+                                            instance_id,
+                                            computer["displayName"],
+                                            ipr["identifier"],
+                                            ipr["name"],
+                                            cve,
+                                            ipr["severity"],
+                                            ipr["CVSSScore"],
+                                        )
+                                        csv_rows.append(
+                                            [
+                                                account_id,
+                                                instance_id,
+                                                computer["displayName"],
+                                                ipr["identifier"],
+                                                ipr["name"],
+                                                cve,
+                                                ipr["severity"],
+                                                ipr["CVSSScore"],
+                                            ]
+                                        )
+                                        cves_protected_by_rules.append(cve)
+                        unprotected_cves = list(
+                            set(this_instance_cves) - set(cves_protected_by_rules)
+                        )
+                        for cve in unprotected_cves:
+                            csv_rows.append(
+                                [
+                                    account_id,
+                                    instance_id,
+                                    computer["displayName"],
+                                    "None",
+                                    "None",
+                                    cve,
+                                    "None",
+                                    "None",
+                                ]
+                            )
+                    else:
+                        for cve in this_instance_cves:
+                            csv_rows.append(
+                                [
+                                    account_id,
+                                    instance_id,
+                                    computer["displayName"],
+                                    "None",
+                                    "None",
+                                    cve,
+                                    "None",
+                                    "None",
+                                ]
+                            )
+
+                csv_header_protected_instances = [
+                    "account_id",
+                    "instance_id",
+                    "computer",
+                    "ipr_identifier",
+                    "ipr_name",
+                    "cve",
+                    "severity",
+                    "cvss_score",
+                ]
+                file_data = [csv_header_protected_instances]
+                file_data.extend(csv_rows)
+                with open("/tmp/" + FILE_NAME, "w", newline="") as file:
+                    writer = csv.writer(file)
+                    writer.writerows(file_data)
+                    s3.upload_file("/tmp/" + FILE_NAME, BUCKET_NAME, FILE_NAME)
+                # csv_file.seek(0)
+                # The subject line for the email.
+                message = f'Inspector findings and Cloud One ips rule report was generated, check "inspector_vulnerability_report.csv" file in "{BUCKET_NAME}" for more details'
+                subject = f"Cloud One IPS rules and Inspector findings (CVEs) Report"
+
+                print("sendig sns...")
+                send_sns(topic_arn=TOPIC_ARN, subject=subject, message=message)
+
+  ScheduledRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "ScheduledRule"
+      ScheduleExpression: !Sub ${CronSchedule} 
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: 
+            Fn::GetAtt: 
+              - "VulnerabilityReportLambda"
+              - "Arn"
+          Id: "TargetFunctionV1"
+  
+  PermissionForEventsToInvokeLambda: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: !Ref "VulnerabilityReportLambda"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: 
+        Fn::GetAtt: 
+          - "ScheduledRule"
+          - "Arn"
