@@ -407,8 +407,6 @@ Resources:
 
   VulnerabilityReportLambda:
     Type: AWS::Lambda::Function
-    Description: >
-      This Function send out the report of which ips rule that can protect cves found in Inspector findings
     Properties:
       Handler: index.lambda_handler
       MemorySize: 128
