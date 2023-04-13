@@ -1,4 +1,22 @@
 AWSTemplateFormatVersion: 2010-09-09
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Cloud One Parameters"
+        Parameters: 
+          - ApiKey
+          - CloudOneRegion
+      - 
+        Label: 
+          default: "AWS Parameters"
+        Parameters: 
+          - CreateNewBucket
+          - BucketName
+          - CronSchedule
+          - SnsSubscriptionEmail
+
 Parameters:
   BucketName:
     Type: String
@@ -10,54 +28,9 @@ Parameters:
       - 'No'
     Description: >-
       Are you creating a new bucket for the reports?
-  AutoAssignFileName:
+  SnsSubscriptionEmail:
     Type: String
-    Description: Name the csv file that contains the rule assignment report
-    Default: ips_rule_auto_assign_report.csv
-  VulnerabilityReportFileName:
-    Type: String
-    Description: Name the csv file that contains the Vulnerability report
-    Default: inspector_vulnerability_report.csv
-  EventBridgeRuleName:
-    Type: String
-    Default: inspector-finding
-    Description: Name of the Event Bridge
-  NotifySeverities:
-    Type: CommaDelimitedList
-    Default: HIGH, CRITICAL
-    Description: Enter the severities of the findings you want to be notify about (All in Capital letter)
-  TopicArn: 
-    Type: String
-    Description: Enter the arn of your existing SNS topic
-  AwsRegion:
-    Type: String
-    Description: Please enter the region in which the lambda will be executed
-    Default : us-east-1
-    AllowedValues:
-      - us-east-1
-      - us-east-2	
-      - us-east-1	
-      - us-west-1	
-      - us-west-2
-      - af-south-1
-      - ap-east-1
-      - ap-southeast-3
-      - ap-south-1
-      - ap-northeast-3
-      - ap-northeast-2
-      - ap-southeast-1
-      - ap-southeast-2
-      - ap-northeast-1
-      - ca-central-1
-      - eu-central-1
-      - eu-west-1
-      - eu-west-2
-      - eu-south-1
-      - eu-west-3
-      - eu-north-1
-      - me-south-1
-      - me-central-1
-      - sa-east-1
+    Description: Email address to be used to subscribe to the SNS Topic
   CloudOneRegion:
     Type: String
     Description: Enter your Cloud One Region
@@ -87,6 +60,14 @@ Conditions:
 
 Resources:
   #   This secret holds the Trend Micro Cloud One API key.
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: "inspector-findings"
+      TopicName: !Sub "${AWS::StackName}-Inspector-Findings"
+      Subscription:
+        - Protocol: "email"
+          Endpoint: !Ref SnsSubscriptionEmail
   ApiKeySecret:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -99,6 +80,7 @@ Resources:
     Type: AWS::S3::Bucket
     Condition: CreateBucket
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Ref BucketName
   LambdaSecretAcessPolicy: 
@@ -146,7 +128,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: sns:Publish
-                Resource: !Ref TopicArn
+                Resource: !Ref SNSTopic
         - PolicyName: S3WritePolicy
           PolicyDocument:
             Version: '2012-10-17'
@@ -166,9 +148,9 @@ Resources:
           cloudoneregion: !Ref CloudOneRegion
           c1_api_key: !Ref ApiKeySecret
           bucket_name: !Ref BucketName
-          topic_arn: !Ref TopicArn
-          csv_filename: !Ref AutoAssignFileName
-          aws_region: !Ref AwsRegion
+          topic_arn: !Ref SNSTopic
+          csv_filename: !Sub "${AWS::Region}-ips_rule_auto_assign_report.csv"
+          aws_region: !Ref AWS::Region
       Role: !GetAtt IpsRuleAutoAssignLambdaRole.Arn
       Code:
         ZipFile: |
@@ -384,13 +366,16 @@ Resources:
   EventBridgeRule:
     Type: AWS::Events::Rule
     Properties:
-      Name: !Ref EventBridgeRuleName
+      Name: !Sub "${AWS::StackName}-inspector-finding-event"
       EventPattern:
         source: ["aws.inspector2"]
         detail-type: ["Inspector2 Finding"]
         detail:
           status: ["ACTIVE"]
-          severity: !Ref NotifySeverities
+          severity: 
+            - HIGH
+            - CRITICAL
+            - MEDIUM
           resources:
             type: ["AWS_EC2_INSTANCE"]
       Targets:
@@ -417,9 +402,9 @@ Resources:
           cloudoneregion: !Ref CloudOneRegion
           c1_api_key: !Ref ApiKeySecret
           bucket_name : !Ref BucketName
-          topic_arn: !Ref TopicArn
-          csv_filename: !Ref VulnerabilityReportFileName
-          aws_region: !Ref AwsRegion
+          topic_arn: !Ref SNSTopic
+          csv_filename: !Sub "${AWS::Region}-inspector_vulnerability_report.csv"
+          aws_region: !Ref AWS::Region
       Role: !GetAtt IpsRuleAutoAssignLambdaRole.Arn
       Code:
         ZipFile: |

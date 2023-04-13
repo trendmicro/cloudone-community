@@ -1,6 +1,6 @@
 # Cloud One Workload Security Integration with Amazon Inspector.
 
-This script will deploy two lambda functions, one will run (weekly)a report of vulnerabilities from EC2 instances that Amazon Inspector detects and match them against Trend Micro IPS rules. The second Lambda function will assign thoses rules or virtual patches to protect workloads against [CVE](https://www.cve.org/About/Overview)’s automattically as Amazon Inspector detects them. 
+This script will deploy two lambda functions, one will run (on a schedule based, the default is every wednesday)a report of vulnerabilities from EC2 instances that Amazon Inspector detects and match them against Trend Micro IPS rules. The second Lambda function will assign thoses rules or virtual patches to protect workloads against [CVE](https://www.cve.org/About/Overview)’s automattically as soon as Amazon Inspector detects them. 
     > **Key:** In this case Amazon Inspector as vulnerability scanner and Trend Micro Cloud One Workload Security is acting as IPS (Intrusion Protection Service).
 
 Click the below to launch the CloudFormation template.
@@ -14,7 +14,7 @@ Click the below to launch the CloudFormation template.
 
 2. You must enable [Amazon Inspector](https://docs.aws.amazon.com/inspector/latest/user/getting_started_tutorial.html) in your AWS account.
 
-3. You need to [Create an SNS Topic](https://docs.aws.amazon.com/sns/latest/dg/sns-configuring.html) you want to send the report (both the vulnerability report and the auto assigned report) to.
+3. You need to accept the invitation send to your email to subscribe to the sns notification.
 
 4. Generate the [API Key](https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/) from Cloud One.
 
