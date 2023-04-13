@@ -59,7 +59,6 @@ Conditions:
     !Equals [!Ref CreateNewBucket, "Yes"]
 
 Resources:
-  #   This secret holds the Trend Micro Cloud One API key.
   SNSTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -68,6 +67,7 @@ Resources:
       Subscription:
         - Protocol: "email"
           Endpoint: !Ref SnsSubscriptionEmail
+  #   This secret holds the Trend Micro Cloud One API key.
   ApiKeySecret:
     Type: AWS::SecretsManager::Secret
     Properties:

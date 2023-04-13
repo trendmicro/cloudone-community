@@ -1,12 +1,16 @@
 # Cloud One Workload Security Integration with Amazon Inspector.
 
+## Architecture 
+This project deploys 2 AWS Lambda Functions:
+* IpsRuleAutoAssignLambda: This Lambda function is triggered whenever there is a new Inspector scan result and applies the findings to the proper Workload Security policy
+*  VulnerabilityReportLambda: This Lambda function is triggered on the frequency defined by you using the `CronSchedule` parameter (defaults to once every Wednesday) and sends the results to a SNS topic.
+
 This script will deploy two lambda functions, one will run (on a schedule based, the default is every wednesday)a report of vulnerabilities from EC2 instances that Amazon Inspector detects and match them against Trend Micro IPS rules. The second Lambda function will assign thoses rules or virtual patches to protect workloads against [CVE](https://www.cve.org/About/Overview)’s automattically as soon as Amazon Inspector detects them. 
     > **Key:** In this case Amazon Inspector as vulnerability scanner and Trend Micro Cloud One Workload Security is acting as IPS (Intrusion Protection Service).
 
 Click the below to launch the CloudFormation template.
 
 [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1ws-inspector-findings-protectionV2&templateURL=https://cloudone-community.s3.us-east-1.amazonaws.com/latest/Workload-Security/Integration/aws-python-amazon-inspector-integration-v2/templates/c1ws-inspector-findings-template.yaml) 
-
 
 ## Prerequisites
 
@@ -20,10 +24,7 @@ Click the below to launch the CloudFormation template.
 
 5. Create an s3 bucket (Optional) or use an existing s3 bucket of your choice to received the reports in csv file
 
-
 6. For more information about cron expression [Click Here](https://www.designcise.com/web/tutorial/how-to-fix-parameter-scheduleexpression-is-not-valid-serverless-error)
-
- 
 
  ## Deployment
 
