@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Trend Cloud One All-In-One Onboard Stack
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: 'Please adjust the fields below as required for deployment.'
+      Parameters:
+      - CloudOneApiKey
+      - VisionOneServiceToken
+      - CreateNewTrail
+      - ExistingCloudtrailBucketName
+    - Label:
+        default: 'Warning: Do not modify the fields below unless you know what you
+         are doing. Modifications may cause your deployment to fail.'
+      Parameters:
+      - QSS3BucketName
+      - QSS3KeyPrefix
+    ParameterLabels:
+      CloudOneApiKey:
+        default: CloudOneApiKey
+      VisionOneServiceToken:
+        default: VisionOneServiceToken
+    
+
+Parameters:
+  CloudOneApiKey:
+    Description: Cloud One API Key. You can learn more about it at https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/
+    Type: String
+    NoEcho: true
+  VisionOneServiceToken:
+    Description: Vision One Service Token. See step 1 at https://docs.trendmicro.com/en-us/enterprise/trend-micro-xdr-help/ConfiguringCloudOneWorkloadSecurity/
+    Type: String
+    NoEcho: true
+  CreateNewTrail:
+    Description: Decides if a new Trail should be created. Defaults to False,
+      so you must enter a S3 Bucket name in the ExistingCloudtrailBucketName
+      parameter. In case you pick True, a new trail and bucket will be created
+      for you. Setting this to true will incur in extra costs.
+    Type: String
+    AllowedValues:
+      - "True"
+      - "False"
+    Default: "False"
+  ExistingCloudtrailBucketName:
+    Description: Specify the name of an existing bucket that you want to use for forwarding
+      to Trend Micro Cloud One.
+    Type: String
+    Default: EnterAValueHere
+  QSS3BucketName:
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+    ConstraintDescription: Deployment bucket name can include numbers, lowercase
+      letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
+      (-).
+    Default: cloudone-community
+    Description: S3 bucket name for the Deployment assets. Deployment bucket name
+      can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: ^[0-9a-zA-Z-/.]*$
+    ConstraintDescription: Deployment key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), dots(.) and forward slash (/).
+    Default: "latest/"
+    Description: S3 key prefix for the Deployment assets. Deployment key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), dots(.) and
+      forward slash (/).
+    Type: String
+
+Conditions:
+  HasNoExistingCloudtrailBucketName:
+    !Equals ["True", !Ref CreateNewTrail]
+
+Resources:
+  GetCloudOneRegionAndAccountStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CloudOneApiKey: !Ref CloudOneApiKey
+      TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/get-cloudone-region-and-account.yaml'
+
+  VisionOneEnrollmentStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CloudOneApiKey: !Ref CloudOneApiKey
+        CloudOneRegion: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneRegion
+        VisionOneServiceToken: !Ref VisionOneServiceToken
+      TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/vision-one-enrollment.template.yaml'
+
+  WorkloadSecurityIntegrationStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CloudOneApiKey: !Ref CloudOneApiKey
+        CloudOneRegion: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneRegion
+      TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/workloadsecurity.template.yaml'
+    DependsOn:
+      - VisionOneEnrollmentStack
+
+  CloudOneIntegrationStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CloudOneRegion: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneRegion
+        CloudOneAccountID: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneAccountId
+        CloudOneApiKey: !Ref CloudOneApiKey
+      TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/cloudone.template.yaml'
+    DependsOn:
+      - VisionOneEnrollmentStack
+
+  CloudTrailGetInfoStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CloudOneRegion: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneRegion
+        CloudOneApiKey: !Ref CloudOneApiKey
+      TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/cloudtrail.template.yaml'
+    DependsOn:
+      - CloudOneIntegrationStack
+
+  CloudTrail:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        ExistingCloudtrailBucketName: !If [HasNoExistingCloudtrailBucketName, "", !Ref ExistingCloudtrailBucketName]
+        ServiceToken: !GetAtt CloudTrailGetInfoStack.Outputs.ServiceToken
+        ServiceURL: !GetAtt CloudTrailGetInfoStack.Outputs.ServiceURL
+        S3BucketName: !GetAtt CloudTrailGetInfoStack.Outputs.S3BucketName
+        APIVersion: !GetAtt CloudTrailGetInfoStack.Outputs.APIVersion
+      TemplateURL: !GetAtt CloudTrailGetInfoStack.Outputs.TemplateURL

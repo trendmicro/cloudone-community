@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Get Trend Cloud One region and account id given an API Key.
+
+Parameters:
+  CloudOneApiKey:
+    Description: Cloud One API Key. You can learn more about it at https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/
+    Type: String
+    NoEcho: true
+  
+Resources:
+  GetCloudOneRegionAndAccountFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.9
+      Architectures:
+        - arm64
+      Timeout: 60
+      Handler: index.lambda_handler
+      Role: !GetAtt GetCloudOneRegionAndAccountRole.Arn
+      Environment:
+        Variables:
+          CloudOneApiKey: !Ref CloudOneApiKey
+      Code:
+        ZipFile:
+          !Sub
+            |-
+              import json
+              import os
+              import urllib3
+              import boto3
+              import cfnresponse
+
+              def lambda_handler(event, context):
+                  status = cfnresponse.SUCCESS
+                  response_data = {}
+                  physicalResourceId = None
+                  try:
+                      
+                      if event["RequestType"] == "Create" or event["RequestType"] == "Update":
+                        cloudOneApiKey = os.environ['CloudOneApiKey']
+                        apiKeyId = cloudOneApiKey.split(':')[0]
+
+                        url = 'https://accounts.cloudone.trendmicro.com/api/apikeys/' + apiKeyId
+
+                        headers = {
+                          'api-version': 'v1',
+                          'Authorization': 'ApiKey '+cloudOneApiKey+'',
+                          'Content-Type': 'application/json'
+                        }
+
+                        http = urllib3.PoolManager()
+                        print(url)
+                        response = http.request("GET", url=url, headers=headers)
+                        print(response)
+                        response_json_data = json.loads(response.data.decode("utf-8"))
+                        print(response_json_data)
+                        urn = response_json_data["urn"]
+                        region = urn.split(":")[3]
+                        accountId = urn.split(":")[4]
+                        physicalResourceId = response_json_data["urn"] 
+                        response_data = {"AccountId": accountId, "Region": region}
+
+                      else: # if event["RequestType"] == "Delete":
+                        physicalResourceId = event["PhysicalResourceId"]
+
+                  except Exception as e:
+                    print(e)
+                    status = cfnresponse.FAILED
+                  
+                  cfnresponse.send(event, context, status, response_data, physicalResourceId)
+
+  GetCloudOneRegionAndAccount:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt GetCloudOneRegionAndAccountFunction.Arn
+
+  GetCloudOneRegionAndAccountRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  
+Outputs:
+  CloudOneAccountId:
+    Description: Cloud One Account Id
+    Value: !GetAtt GetCloudOneRegionAndAccount.AccountId
+  
+  CloudOneRegion:
+    Description: Cloud One Account Region
+    Value: !GetAtt GetCloudOneRegionAndAccount.Region

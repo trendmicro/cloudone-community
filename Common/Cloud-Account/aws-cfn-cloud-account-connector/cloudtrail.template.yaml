@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Trend Cloud One CloudTrail Onboarding.
+
+Parameters:
+  CloudOneApiKey:
+    Description: Cloud One API Key. You can learn more about it at https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/
+    Type: String
+    NoEcho: true
+  CloudOneRegion:
+    Description: Cloud One Region. More info at https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-regions/
+    Type: String
+    Default: us-1
+    AllowedValues:
+       - us-1
+       - trend-us-1
+       - au-1
+       - ie-1
+       - sg-1
+       - in-1
+       - jp-1
+       - ca-1
+
+Resources:
+  GetCloudTrailStackParametersFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.9
+      Architectures:
+        - arm64
+      Timeout: 60
+      Handler: index.lambda_handler
+      Role: !GetAtt GetCloudTrailStackParametersRole.Arn
+      Environment:
+        Variables:
+          CloudOneRegion: !Ref CloudOneRegion
+          CloudOneApiKey: !Ref CloudOneApiKey
+          AwsAccountId: !Ref "AWS::AccountId"
+          AwsRegion: !Ref "AWS::Region"
+      Code:
+        ZipFile:
+          !Sub
+            |-
+              import json
+              import os
+              import urllib3
+              import cfnresponse
+              import re
+              import uuid
+              from urllib.parse import unquote
+
+              def lambda_handler(event, context):
+                  status = cfnresponse.SUCCESS
+                  response_data = {}
+                  physicalResourceId = None
+                  try:
+                      
+                      if event["RequestType"] == "Create" or event["RequestType"] == "Update":
+                        cloudOneRegion = os.environ['CloudOneRegion']
+                        cloudOneApiKey = os.environ['CloudOneApiKey']
+                        awsAccountId = os.environ['AwsAccountId']
+                        awsRegion = os.environ['AwsRegion']
+
+                        url = 'https://cloudtrail.'+cloudOneRegion+'.cloudone.trendmicro.com/api/stacks'
+
+                        payload = json.dumps({
+                          'providerAccountID': awsAccountId,
+                          'awsRegion': awsRegion
+                        })
+                        headers = {
+                          'api-version': 'v1',
+                          'Authorization': 'ApiKey '+cloudOneApiKey+'',
+                          'Content-Type': 'application/json'
+                        }
+
+                        http = urllib3.PoolManager()
+                        encoded_payload = payload.encode("utf-8")
+                        print(url)
+                        response = http.request("POST", url=url, headers=headers, body=encoded_payload)
+                        print(response)
+                        response_json_data = json.loads(response.data.decode("utf-8"))
+                        print(response_json_data)
+                        encodedDeploymentUrl = response_json_data["deploymentURL"]
+                        print(encodedDeploymentUrl)
+                        templateUrl = re.search(r"templateUrl=([^&]+)", encodedDeploymentUrl).group(1)
+                        s3BucketKey = re.search(r"param_S3BucketKey=([^&]+)", encodedDeploymentUrl).group(1)
+                        s3BucketName = re.search(r"param_S3BucketName=([^&]+)", encodedDeploymentUrl).group(1)
+                        serviceToken = re.search(r"param_ServiceToken=([^&]+)", encodedDeploymentUrl).group(1)
+                        serviceUrl = re.search(r"param_ServiceURL=([^&]+)", encodedDeploymentUrl).group(1)
+                        apiVersion = re.search(r"param_APIVersion=([^\n]+)", encodedDeploymentUrl).group(1)
+
+                        physicalResourceId = str(uuid.uuid4())
+                        response_data = {
+                          "TemplateUrl": templateUrl,
+                          "S3BucketKey": s3BucketKey,
+                          "S3BucketName": s3BucketName,
+                          "ServiceToken": serviceToken,
+                          "ServiceUrl": unquote(serviceUrl),
+                          "ApiVersion": apiVersion
+                        }
+
+                      else: # if event["RequestType"] == "Delete":
+                        physicalResourceId = event["PhysicalResourceId"]
+
+                  except Exception as e:
+                    print(e)
+                    status = cfnresponse.FAILED
+                  
+                  cfnresponse.send(event, context, status, response_data, physicalResourceId)
+
+  GetCloudTrailStackParameters:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt GetCloudTrailStackParametersFunction.Arn
+
+  GetCloudTrailStackParametersRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+Outputs:
+  ServiceToken: 
+    Value: !GetAtt GetCloudTrailStackParameters.ServiceToken
+  ServiceURL: 
+    Value: !GetAtt GetCloudTrailStackParameters.ServiceUrl
+  S3BucketName: 
+    Value: !GetAtt GetCloudTrailStackParameters.S3BucketName
+  APIVersion: 
+    Value: !GetAtt GetCloudTrailStackParameters.ApiVersion
+  TemplateURL: 
+    Value: !GetAtt GetCloudTrailStackParameters.TemplateUrl

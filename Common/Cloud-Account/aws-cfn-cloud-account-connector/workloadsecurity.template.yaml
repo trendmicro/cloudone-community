@@ -1,0 +1,238 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Trend Cloud One Workload Security Integration.
+
+Parameters:
+  CloudOneApiKey:
+    Description: Cloud One API Key. You can learn more about it at https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/
+    Type: String
+    NoEcho: true
+  CloudOneRegion:
+    Description: Cloud One Region. More info at https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-regions/
+    Type: String
+    Default: us-1
+    AllowedValues:
+       - us-1
+       - trend-us-1
+       - au-1
+       - ie-1
+       - sg-1
+       - in-1
+       - jp-1
+       - ca-1
+       - de-1
+  
+
+Resources:
+#Role for adding AWS Connector to C1WS
+  WorkloadSecurityRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: arn:aws:iam::147995105371:root
+            Action:
+              - 'sts:AssumeRole'
+            Condition:
+              StringEquals:
+                sts:ExternalId: !GetAtt GetExternalID.ExternalID 
+      Path: /
+#Policy for adding AWS Connector to C1WS
+      Policies:
+        - PolicyName: WorkloadSecurityRole
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "ec2:DescribeImages"
+                  - "ec2:DescribeInstances"
+                  - "ec2:DescribeRegions"
+                  - "ec2:DescribeSubnets"
+                  - "ec2:DescribeTags"
+                  - "ec2:DescribeVpcs"
+                  - "ec2:DescribeAvailabilityZones"
+                  - "ec2:DescribeSecurityGroups"
+                  - "workspaces:DescribeWorkspaces"
+                  - "workspaces:DescribeWorkspaceDirectories"
+                  - "workspaces:DescribeWorkspaceBundles"
+                  - "workspaces:DescribeTags"
+                  - "iam:ListAccountAliases"
+                  - "iam:GetRole"
+                  - "iam:GetRolePolicy"
+                Resource: '*'
+
+#Lambda Execution Role
+  AWSConnectorLambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+#Get External ID
+  GetExternalIDLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.9
+      Architectures:
+        - arm64
+      Timeout: 60
+      Handler: index.lambda_handler
+      Role: !GetAtt AWSConnectorLambdaFunctionRole.Arn
+      Code:
+        ZipFile:
+          !Sub
+            |-
+              import json
+              import urllib3
+              import boto3
+              import cfnresponse
+
+              def lambda_handler(event, context):
+                  status = cfnresponse.SUCCESS
+                  response_data = {}
+                  physicalResourceId = None
+                  try:
+                      
+                      if event["RequestType"] == "Create" or event["RequestType"] == "Update":
+                        cloudOneApiKey = event['ResourceProperties']['CloudOneApiKey']
+                        cloudOneRegion = event['ResourceProperties']['CloudOneRegion']
+
+                        url = 'https://workload.'+cloudOneRegion+'.cloudone.trendmicro.com/api/awsconnectorsettings'
+
+                        headers = {
+                          'api-version': 'v1',
+                          'Authorization': 'ApiKey '+cloudOneApiKey+'',
+                          'Content-Type': 'application/json'
+                        }
+
+                        http = urllib3.PoolManager()
+                        print (url)
+                        response = http.request("GET", url=url, headers=headers)
+                        response_json_data = json.loads(response.data.decode("utf-8"))
+                        print(response_json_data["externalId"])
+                        physicalResourceId = response_json_data["externalId"] 
+                        response_data = {"ExternalID": response_json_data["externalId"]}
+
+                      else: # if event["RequestType"] == "Delete":
+                        physicalResourceId = event["PhysicalResourceId"]
+
+                  except Exception as e:
+                    print(e)
+                    status = cfnresponse.FAILED
+                  
+                  cfnresponse.send(event, context, status, response_data, physicalResourceId)
+
+#Get External ID Custom Resource
+  GetExternalID:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt GetExternalIDLambda.Arn
+      CloudOneApiKey: !Ref CloudOneApiKey
+      CloudOneRegion: !Ref CloudOneRegion
+
+
+#Create AWS Connector
+  AWSConnectorCreateLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.9
+      Architectures:
+        - arm64
+      Timeout: 60
+      Handler: index.lambda_handler
+      Role: !GetAtt AWSConnectorLambdaFunctionRole.Arn
+      Environment:
+        Variables:
+          awsaccountid: !Ref AWS::AccountId
+          externalid: !GetAtt GetExternalID.ExternalID
+          crossaccountrolearn: !GetAtt WorkloadSecurityRole.Arn
+      Code:
+        ZipFile:
+          !Sub
+            |-
+              import json
+              import urllib3
+              import boto3
+              import cfnresponse
+              import os
+
+              def lambda_handler(event, context):
+                  print(event)
+                  
+                  status = cfnresponse.SUCCESS
+                  response_data = {}
+                  physicalResourceId = None
+
+                  accountId = os.environ['awsaccountid']
+                  externalId = os.environ['externalid']
+                  crossAccountRoleArn = os.environ['crossaccountrolearn']
+                  cloudOneApiKey = event['ResourceProperties']['CloudOneApiKey']
+                  cloudOneRegion = event['ResourceProperties']['CloudOneRegion']
+
+                  headers = {
+                    'api-version': 'v1',
+                    'Authorization': 'ApiKey '+cloudOneApiKey+'',
+                    'Content-Type': 'application/json'
+                  }
+
+                  http = urllib3.PoolManager()
+
+                  try:
+                      if event["RequestType"] == "Create" or event["RequestType"] == "Update":
+                          
+                          url = 'https://workload.'+cloudOneRegion+'.cloudone.trendmicro.com/api/awsconnectors'
+
+                          payload = json.dumps({
+                            "displayName": accountId,
+                            "accountId": accountId,
+                            "crossAccountRoleArn": crossAccountRoleArn                                                                                        
+                          })
+
+                          encoded_payload = payload.encode("utf-8")
+                          response = http.request("POST", url=url, headers=headers, body=encoded_payload)
+
+                          response_json_data = json.loads(response.data.decode("utf-8"))
+                          print(response_json_data)
+                          physicalResourceId = str(response_json_data["ID"]) 
+                          response_data = {"ID": str(response_json_data["ID"])}
+
+                      else: # if event["RequestType"] == "Delete":
+                          ID = event["PhysicalResourceId"]
+
+                          url = 'https://workload.'+cloudOneRegion+'.cloudone.trendmicro.com/api/awsconnectors/'+ID
+                          response = http.request("DELETE", url=url, headers=headers)
+                          print(response.data.decode("utf-8"))
+
+                  except Exception as e:
+                      print(e)
+                      status = cfnresponse.FAILED
+                  
+                  cfnresponse.send(event, context, status, response_data, physicalResourceId)
+
+#Create AWS Connector Custom Resource
+  AWSConnectorCreate:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSConnectorCreateLambda.Arn
+      CloudOneApiKey: !Ref CloudOneApiKey
+      CloudOneRegion: !Ref CloudOneRegion
+    DependsOn: GetExternalID 
+
+Outputs:
+  CrossAccountRoleArn:
+    Value: !GetAtt WorkloadSecurityRole.Arn 
