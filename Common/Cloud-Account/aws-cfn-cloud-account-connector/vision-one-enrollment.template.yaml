@@ -55,26 +55,28 @@ Resources:
                   response_data = {}
                   physicalResourceId = None
                   try:
+                      cloudOneRegion = os.environ['CloudOneRegion']
+                      cloudOneApiKey = os.environ['CloudOneApiKey']
+                      visionOneServiceToken = os.environ['VisionOneServiceToken']
+
+                      headers = {
+                        'api-version': 'v1',
+                        'Authorization': 'ApiKey '+cloudOneApiKey+'',
+                        'Content-Type': 'application/json'
+                      }
+
+                      http = urllib3.PoolManager()
                       
                       if event["RequestType"] == "Create" or event["RequestType"] == "Update":
-                        cloudOneRegion = os.environ['CloudOneRegion']
-                        cloudOneApiKey = os.environ['CloudOneApiKey']
-                        visionOneServiceToken = os.environ['VisionOneServiceToken']
+                        
 
                         url = 'https://visionone-connect.'+cloudOneRegion+'.cloudone.trendmicro.com/api/connectors'
 
                         payload = json.dumps({
                           'enrollmentToken': visionOneServiceToken
                         })
-                        headers = {
-                          'api-version': 'v1',
-                          'Authorization': 'ApiKey '+cloudOneApiKey+'',
-                          'Content-Type': 'application/json'
-                        }
-
-                        http = urllib3.PoolManager()
+                      
                         encoded_payload = payload.encode("utf-8")
-                        print(headers)
                         print(url)
                         response = http.request("POST", url=url, headers=headers, body=encoded_payload)
                         print(response)

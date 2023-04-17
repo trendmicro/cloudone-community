@@ -114,8 +114,6 @@ Resources:
 
                         url = 'https://workload.'+cloudOneRegion+'.cloudone.trendmicro.com/api/awsconnectorsettings'
 
-                        payload = json.dumps({
-                        })
                         headers = {
                           'api-version': 'v1',
                           'Authorization': 'ApiKey '+cloudOneApiKey+'',
@@ -123,10 +121,8 @@ Resources:
                         }
 
                         http = urllib3.PoolManager()
-                        encoded_payload = payload.encode("utf-8")
-                        print(headers)
                         print (url)
-                        response = http.request("GET", url=url, headers=headers, body=encoded_payload)
+                        response = http.request("GET", url=url, headers=headers)
                         response_json_data = json.loads(response.data.decode("utf-8"))
                         print(response_json_data["externalId"])
                         physicalResourceId = response_json_data["externalId"] 
@@ -157,6 +153,7 @@ Resources:
       Runtime: python3.9
       Architectures:
         - arm64
+      Timeout: 60
       Handler: index.lambda_handler
       Role: !GetAtt AWSConnectorLambdaFunctionRole.Arn
       Environment:
@@ -175,6 +172,8 @@ Resources:
               import os
 
               def lambda_handler(event, context):
+                  print(event)
+                  
                   status = cfnresponse.SUCCESS
                   response_data = {}
                   physicalResourceId = None
@@ -182,40 +181,46 @@ Resources:
                   accountId = os.environ['awsaccountid']
                   externalId = os.environ['externalid']
                   crossAccountRoleArn = os.environ['crossaccountrolearn']
+                  cloudOneApiKey = event['ResourceProperties']['CloudOneApiKey']
+                  cloudOneRegion = event['ResourceProperties']['CloudOneRegion']
+
+                  headers = {
+                    'api-version': 'v1',
+                    'Authorization': 'ApiKey '+cloudOneApiKey+'',
+                    'Content-Type': 'application/json'
+                  }
+
+                  http = urllib3.PoolManager()
+
                   try:
                       if event["RequestType"] == "Create" or event["RequestType"] == "Update":
-                        cloudOneApiKey = event['ResourceProperties']['CloudOneApiKey']
-                        cloudOneRegion = event['ResourceProperties']['CloudOneRegion']
+                          
+                          url = 'https://workload.'+cloudOneRegion+'.cloudone.trendmicro.com/api/awsconnectors'
 
-                        url = 'https://workload.'+cloudOneRegion+'.cloudone.trendmicro.com/api/awsconnectors'
+                          payload = json.dumps({
+                            "displayName": accountId,
+                            "accountId": accountId,
+                            "crossAccountRoleArn": crossAccountRoleArn                                                                                        
+                          })
 
-                        payload = json.dumps({
-                          "displayName": accountId,
-                          "accountId": accountId,
-                          "crossAccountRoleArn": crossAccountRoleArn                                                                                        
-                        })
-                        headers = {
-                          'api-version': 'v1',
-                          'Authorization': 'ApiKey '+cloudOneApiKey+'',
-                          'Content-Type': 'application/json'
-                        }
+                          encoded_payload = payload.encode("utf-8")
+                          response = http.request("POST", url=url, headers=headers, body=encoded_payload)
 
-                        http = urllib3.PoolManager()
-                        encoded_payload = payload.encode("utf-8")
-                        #print(headers)
-                        response = http.request("POST", url=url, headers=headers, body=encoded_payload)
-
-                      #   response_json_data = json.loads(response.data.decode("utf-8"))
-                      #   print(response_json_data["externalId"])
-                        physicalResourceId = {} 
-                        response_data = {}
+                          response_json_data = json.loads(response.data.decode("utf-8"))
+                          print(response_json_data)
+                          physicalResourceId = str(response_json_data["ID"]) 
+                          response_data = {"ID": str(response_json_data["ID"])}
 
                       else: # if event["RequestType"] == "Delete":
-                        physicalResourceId = event["PhysicalResourceId"]
+                          ID = event["PhysicalResourceId"]
+
+                          url = 'https://workload.'+cloudOneRegion+'.cloudone.trendmicro.com/api/awsconnectors/'+ID
+                          response = http.request("DELETE", url=url, headers=headers)
+                          print(response.data.decode("utf-8"))
 
                   except Exception as e:
-                    print(e)
-                    status = cfnresponse.FAILED
+                      print(e)
+                      status = cfnresponse.FAILED
                   
                   cfnresponse.send(event, context, status, response_data, physicalResourceId)
 
