@@ -74,7 +74,6 @@ Resources:
 
                         http = urllib3.PoolManager()
                         encoded_payload = payload.encode("utf-8")
-                        print(headers)
                         print(url)
                         response = http.request("POST", url=url, headers=headers, body=encoded_payload)
                         print(response)
