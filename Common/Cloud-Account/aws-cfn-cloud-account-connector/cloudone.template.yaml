@@ -23,7 +23,17 @@ Parameters:
        - jp-1
        - ca-1
        - de-1
-  
+  CloudOneFeatures:
+    Description: Comma separated list of Cloud One Features to deploy. Defaults to deploy Sentry.
+      More info at https://cloudone.trendmicro.com/docs/cloud-account-management/api-reference/tag/AWS#operation/describeAWSStackTemplate
+    Type: String
+    Default: cloud-sentry
+  RegionsToDeploy:
+    Description: Comma separated list of AWS Regions where the Features will be deployed to. If empty, all accessible regions will be used.
+      More info at https://cloudone.trendmicro.com/docs/cloud-account-management/api-reference/tag/AWS#operation/describeAWSStackTemplate
+    Type: String
+    Default: ""
+
 
 Resources:
   CloudOneIntegrationStack:
@@ -33,7 +43,7 @@ Resources:
         CloudOneRegion: !Ref CloudOneRegion
         CloudOneAccountID: !Ref CloudOneAccountID
         CloudOneOIDCProviderURL: !Sub 'cloudaccounts.${CloudOneRegion}.cloudone.trendmicro.com'
-      TemplateURL: !Sub 'https://cloud-one-cloud-accounts-${AWS::Region}.s3.${AWS::Region}.amazonaws.com/templates/aws/cloud-account-management-role.template'
+      TemplateURL: !GetAtt GetCloudOneIntegrationTemplate.templateURL
 
   AddAWSAccountToCloudOneFunction:
     Type: AWS::Lambda::Function
@@ -51,63 +61,61 @@ Resources:
           CloudOneApiKey: !Ref CloudOneApiKey
       Code:
         ZipFile:
-          !Sub
-            |-
-              import json
-              import os
-              import urllib3
-              import boto3
-              import cfnresponse
+          |-
+            import json
+            import os
+            import urllib3
+            import cfnresponse
 
-              def lambda_handler(event, context):
-                  status = cfnresponse.SUCCESS
-                  response_data = {}
-                  physicalResourceId = None
-                  try:
+            def lambda_handler(event, context):
+                status = cfnresponse.SUCCESS
+                response_data = {}
+                physicalResourceId = None
+                try:
 
-                      cloudOneRoleArn = os.environ['CloudOneRoleArn']
-                      cloudOneRegion = os.environ['CloudOneRegion']
-                      cloudOneApiKey = os.environ['CloudOneApiKey']
+                    cloudOneRoleArn = os.environ['CloudOneRoleArn']
+                    cloudOneRegion = os.environ['CloudOneRegion']
+                    cloudOneApiKey = os.environ['CloudOneApiKey']
 
-                      headers = {
-                        'api-version': 'v1',
-                        'Authorization': 'ApiKey '+cloudOneApiKey+'',
-                        'Content-Type': 'application/json'
-                      }
+                    headers = {
+                      'api-version': 'v1',
+                      'Authorization': 'ApiKey '+cloudOneApiKey+'',
+                      'Content-Type': 'application/json'
+                    }
 
-                      http = urllib3.PoolManager()
+                    http = urllib3.PoolManager()
+                    
+                    
+                    if event["RequestType"] == "Create" or event["RequestType"] == "Update":
                       
+                      url = 'https://cloudaccounts.'+cloudOneRegion+'.cloudone.trendmicro.com/api/cloudaccounts/aws'
+
+                      payload = json.dumps({
+                        'roleARN': cloudOneRoleArn
+                      })
+                      encoded_payload = payload.encode("utf-8")
+                      print(url)
+                      response = http.request("POST", url=url, headers=headers, body=encoded_payload)
+                      print(response)
+                      response_json_data = json.loads(response.data.decode("utf-8"))
+                      print(response_json_data)
+                      physicalResourceId = response_json_data["id"] 
+                      response_data = {"ID": response_json_data["id"]}
+
+                    else: # if event["RequestType"] == "Delete":
+                      id = event["PhysicalResourceId"]
+
+                      url = 'https://cloudaccounts.'+cloudOneRegion+'.cloudone.trendmicro.com/api/cloudaccounts/aws/' + id
+
+                      print(url)
+                      response = http.request("DELETE", url=url, headers=headers)
+                      print(response)
                       
-                      if event["RequestType"] == "Create" or event["RequestType"] == "Update":
-                        
-                        url = 'https://cloudaccounts.'+cloudOneRegion+'.cloudone.trendmicro.com/api/cloudaccounts/aws'
-
-                        payload = json.dumps({
-                          'roleARN': cloudOneRoleArn
-                        })
-                        encoded_payload = payload.encode("utf-8")
-                        print(url)
-                        response = http.request("POST", url=url, headers=headers, body=encoded_payload)
-                        print(response)
-                        response_json_data = json.loads(response.data.decode("utf-8"))
-                        print(response_json_data)
-                        physicalResourceId = response_json_data["id"] 
-                        response_data = {"ID": response_json_data["id"]}
-
-                      else: # if event["RequestType"] == "Delete":
-                        id = event["PhysicalResourceId"]
-
-                        url = 'https://cloudaccounts.'+cloudOneRegion+'.cloudone.trendmicro.com/api/cloudaccounts/aws/' + id
-
-                        print(url)
-                        response = http.request("DELETE", url=url, headers=headers)
-                        print(response)
-                        
-                  except Exception as e:
-                    print(e)
-                    status = cfnresponse.FAILED
-                  
-                  cfnresponse.send(event, context, status, response_data, physicalResourceId)
+                except Exception as e:
+                  print(e)
+                  status = cfnresponse.FAILED
+                
+                cfnresponse.send(event, context, status, response_data, physicalResourceId)
 
   AddAWSAccountToCloudOne:
     Type: AWS::CloudFormation::CustomResource
@@ -128,9 +136,124 @@ Resources:
             - sts:AssumeRole
       Path: "/"
       ManagedPolicyArns:
-        - Fn::Join:
-            - ""
-            - - "arn:"
-              - Ref: AWS::Partition
-              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  
+  GetCloudOneIntegrationTemplateFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.9
+      Architectures:
+        - arm64
+      Timeout: 60
+      Handler: index.lambda_handler
+      Role: !GetAtt GetCloudOneIntegrationTemplateFunctionRole.Arn
+      Environment:
+        Variables:
+          CloudOneRegion: !Ref CloudOneRegion
+          CloudOneApiKey: !Ref CloudOneApiKey
+          AWSRegion: !Ref AWS::Region
+          CloudOneFeatures: !Ref CloudOneFeatures
+          RegionsToDeploy: !Ref RegionsToDeploy
+      Code:
+        ZipFile:
+          |-
+            import json
+            import os
+            import urllib3
+            import boto3
+            import cfnresponse
+
+            ec2 = boto3.client('ec2')
+
+            def lambda_handler(event, context):
+                status = cfnresponse.SUCCESS
+                response_data = {}
+                physicalResourceId = None
+                try:
+
+                    cloudOneRegion = os.environ['CloudOneRegion']
+                    cloudOneApiKey = os.environ['CloudOneApiKey']
+                    aws_region =  os.environ['AWSRegion'] or os.environ['AWS_REGION'] 
+                    features = os.environ['CloudOneFeatures']
+                    regions_to_deploy = os.environ['RegionsToDeploy']   
+
+                    headers = {
+                      'api-version': 'v1',
+                      'Authorization': 'ApiKey '+cloudOneApiKey+'',
+                      'Content-Type': 'application/json'
+                    }
+
+                    http = urllib3.PoolManager()
+                    
+                    if event["RequestType"] == "Create" or event["RequestType"] == "Update":
+
+                      if not regions_to_deploy:
+                        response = [region['RegionName'] for region in ec2.describe_regions()['Regions']]
+                        print('Regions:', response)
+                        regions_to_deploy = ",".join(response)
+                      
+                      url = 'https://cloudaccounts.'+cloudOneRegion+'.cloudone.trendmicro.com/api/cloudaccounts/aws/templates'
+
+                      query_parameters = {
+                        "features": features,
+                        "awsRegion": aws_region,
+                        "featureAWSRegions": regions_to_deploy
+                      }
+
+                      print(url)
+                      response = http.request("GET", url=url, headers=headers, fields=query_parameters)
+                      print(response)
+                      response_json_data = json.loads(response.data.decode("utf-8"))
+                      print(response_json_data)
+                      physicalResourceId = response_json_data["templateURL"] 
+                      response_data = {
+                        "templateURL": response_json_data["templateURL"],
+                        "parameters": response_json_data["parameters"]
+                      }
+
+                    else: # if event["RequestType"] == "Delete":
+                      id = event["PhysicalResourceId"]
+
+                      url = 'https://cloudaccounts.'+cloudOneRegion+'.cloudone.trendmicro.com/api/cloudaccounts/aws/' + id
+
+                      print(url)
+                      response = http.request("DELETE", url=url, headers=headers)
+                      print(response)
+                      
+                except Exception as e:
+                  print(e)
+                  status = cfnresponse.FAILED
+                
+                cfnresponse.send(event, context, status, response_data, physicalResourceId)
+
+  GetCloudOneIntegrationTemplate:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt GetCloudOneIntegrationTemplateFunction.Arn
+
+  GetCloudOneIntegrationTemplateFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Policies:
+        - PolicyName: GetAvailableRegions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeRegions
+                Resource: '*'
+        
   
