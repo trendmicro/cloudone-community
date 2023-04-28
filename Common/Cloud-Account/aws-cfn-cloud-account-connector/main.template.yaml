@@ -23,7 +23,6 @@ Metadata:
       VisionOneServiceToken:
         default: VisionOneServiceToken
     
-
 Parameters:
   CloudOneApiKey:
     Description: Cloud One API Key. You can learn more about it at https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/
