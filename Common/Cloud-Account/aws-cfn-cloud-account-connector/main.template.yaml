@@ -11,6 +11,8 @@ Metadata:
       - VisionOneServiceToken
       - CreateNewTrail
       - ExistingCloudtrailBucketName
+      - DeployCloudSentry
+      - DeployNetworkSecurityIntegration
     - Label:
         default: 'Warning: Do not modify the fields below unless you know what you
          are doing. Modifications may cause your deployment to fail.'
