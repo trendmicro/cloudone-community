@@ -12,7 +12,7 @@ See [Conformity Well Architected API](https://cloudone.trendmicro.com/docs/confo
 
 ## Pre-requisites
 
-- Administrator access to the AWS Console. In default, sufficient access rights to run CloudFormation templates and to invoke Lambda functions from the AWS CLI or AWS CloudShell
+- Administrator access to the AWS Console. In default, sufficient access rights to run CloudFormation templates and to invoke Lambda functions from the [AWS CLI](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html) or [AWS CloudShell](https://docs.aws.amazon.com/cloudshell/latest/userguide/welcome.html)
 - Ensure the [workload has been defined](https://docs.aws.amazon.com/wellarchitected/latest/userguide/define-workload.html) in the AWS Well Architected tool
 - Have the following information available:
   _ [**Cloud One Account Id**](https://cloudone.trendmicro.com/docs/cloud-account-management/aws/#cloud-account-page)

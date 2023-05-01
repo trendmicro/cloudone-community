@@ -1,8 +1,8 @@
 #!/usr/local/bin/python3
 
 import argparse
-import subprocess
 import json
+import boto3
 
 parser = argparse.ArgumentParser(
     description='''
@@ -16,19 +16,15 @@ parser.add_argument('--stackName', type=str, default='Conformity-WellArchitected
                     help='Name used to create the Conformity->Well Architected Review sync stack')
 args = parser.parse_args()
 
-jsonData = None
-with subprocess.Popen(args=[ "aws", "cloudformation", "describe-stacks", "--stack-name", f"{args.stackName}", "--output", "json"], stdout=subprocess.PIPE) as proc:
-    jsonData = json.loads(proc.stdout.read().decode('utf-8'))
-
-stack = jsonData["Stacks"][0]
-outputs = stack["Outputs"]
+cfnClient = boto3.client('cloudformation')
+stacks = cfnClient.describe_stacks(StackName=f'{args.stackName}')
+stack = stacks['Stacks'][0]
+outputs = stack['Outputs']
 lambdaFunctionArn = [ x['OutputValue'] for x in outputs if x['OutputKey'] == 'LambdaFunctionName' ][0]
 
-jsonData = None
-with subprocess.Popen(args=[ "aws", "lambda", "invoke", "--function-name", f"{lambdaFunctionArn}", "--invocation-type", "RequestResponse", "response.json", "--output", "json"], stdout=subprocess.PIPE) as proc:
-    jsonData = json.loads(proc.stdout.read().decode('utf-8'))
-
-print(jsonData)
+lambdaClient = boto3.client('lambda')
+response = lambdaClient.invoke(FunctionName=f'{lambdaFunctionArn}', InvocationType='RequestResponse')
+print(response)
 
 
 

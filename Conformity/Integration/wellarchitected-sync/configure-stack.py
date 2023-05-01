@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3
 
 import argparse
-import subprocess
+import boto3
 
 parser = argparse.ArgumentParser(
     description='''
@@ -30,6 +30,54 @@ parser.add_argument('--environment', type=str, required=True,
                     help='Environment where this is being deployed')
 args = parser.parse_args()
 
-command = f'aws cloudformation create-stack --stack-name Conformity-WellArchitectedReview-Sync --template-body file://conformity-wellarchitected-sync.yaml --capabilities CAPABILITY_NAMED_IAM --parameters ParameterKey=Workload,ParameterValue={args.workload},UsePreviousValue=true ParameterKey=CloudOneAccountId,ParameterValue={args.accountId},UsePreviousValue=true ParameterKey=CloudOneRegion,ParameterValue={args.region},UsePreviousValue=true ParameterKey=CloudOneAPIKey,ParameterValue={args.apiKey},UsePreviousValue=true ParameterKey=ExternalId,ParameterValue={args.externalId},UsePreviousValue=true ParameterKey=ConformityAccountId,ParameterValue={args.conformityAccountId},UsePreviousValue=true ParameterKey=Owner,ParameterValue={args.owner},UsePreviousValue=true ParameterKey=Environment,ParameterValue={args.environment},UsePreviousValue=true' 
-subprocess.run(args=command, shell=True)
+client = boto3.client('cloudformation')
 
+response = None
+with open('conformity-wellarchitected-sync.yaml', 'r') as reader:
+    response = client.create_stack(StackName='Conformity-WellArchitectedReview-Sync',
+                               TemplateBody=reader.read(),
+                               Capabilities=[ 'CAPABILITY_NAMED_IAM' ],
+                               Parameters=[
+                                   {
+                                       'ParameterKey': 'Workload',
+                                       'ParameterValue': f'{args.workload}',
+                                       'UsePreviousValue': True
+                                   },
+                                   {
+                                       'ParameterKey': 'CloudOneAccountId',
+                                       'ParameterValue': f'{args.accountId}',
+                                       'UsePreviousValue': True
+                                   },
+                                   {
+                                       'ParameterKey': 'CloudOneRegion',
+                                       'ParameterValue': f'{args.region}',
+                                       'UsePreviousValue': True
+                                   },
+                                   {
+                                       'ParameterKey': 'CloudOneAPIKey',
+                                       'ParameterValue': f'{args.apiKey}',
+                                       'UsePreviousValue': True
+                                   },
+                                   {
+                                       'ParameterKey': 'ExternalId',
+                                       'ParameterValue': f'{args.externalId}',
+                                       'UsePreviousValue': True
+                                   },
+                                   {
+                                      'ParameterKey': 'ConformityAccountId',
+                                      'ParameterValue': f'{args.conformityAccountId}',
+                                      'UsePreviousValue': True
+                                   },
+                                   {
+                                      'ParameterKey': 'Owner',
+                                      'ParameterValue': f'{args.owner}',
+                                      'UsePreviousValue': True
+                                   },
+                                   {
+                                      'ParameterKey': 'Environment',
+                                      'ParameterValue': f'{args.environment}',
+                                      'UsePreviousValue': True 
+                                   }
+                               ])
+
+print(response)
