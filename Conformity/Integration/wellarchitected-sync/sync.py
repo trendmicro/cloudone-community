@@ -25,7 +25,3 @@ lambdaFunctionArn = [ x['OutputValue'] for x in outputs if x['OutputKey'] == 'La
 lambdaClient = boto3.client('lambda')
 response = lambdaClient.invoke(FunctionName=f'{lambdaFunctionArn}', InvocationType='RequestResponse')
 print(response)
-
-
-
-
