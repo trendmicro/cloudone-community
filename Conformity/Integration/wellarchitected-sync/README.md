@@ -1,41 +1,40 @@
-# Well-Architected Conformity Sync
+# Well Architected Conformity Sync
 
-This tools sets up a synchronization link between Cloud One Conformity and the AWS Well Architected tool.
+This tools sets up a synchronization link between Cloud One Conformity and a AWS Well Architected review.
 
-The sync goes in one direction from Conformity to the AWS Well Architected tool. If configurations are remediated you need to run the synchronization again to update the Well Architected tool but keep in mind that the notes will be over-written.
+The sync goes in one direction from Conformity to the AWS Well Architected tool. If configurations are remediated you need to run the synchronization again to update the Well Architected tool **but keep in mind that existing notes will be over-written.**
 
 Setting up the Sync tool creates 2 IAM Roles and their policies, AWS SSM Parameters, a secret and a Lambda function.
 
-See https://cloudone.trendmicro.com/docs/conformity/aws-integration/#aws-well-architected-tool for further details about Conformity's integration with the Well Architected tool.
+See [AWS Well Architected Tool](https://cloudone.trendmicro.com/docs/conformity/aws-integration/#aws-well-architected-tool) for further details about Conformity's integration with the Well Architected tool.
 
-See https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/Well-Architected-Tool for further details about the Conformity WellArchitected sync API.
+See [Conformity Well Architected API](https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/Well-Architected-Tool) for further details about the Conformity WellArchitected sync API.
 
 ## Pre-requisites
 
 - Administrator access to the AWS Console. In default, sufficient access rights to run CloudFormation templates and to invoke Lambda functions from the AWS CLI or AWS CloudShell
-- A workload configured in the AWS Well Architected tool
+- Ensure the [workload has been defined](https://docs.aws.amazon.com/wellarchitected/latest/userguide/define-workload.html) in the AWS Well Architected tool
 - Have the following information available:
-  _ **Cloud One Account Id** Hint: it can be obtained from the Conformity API or the Dashboard
-  _ **Cloud One Conformity External Id**
-  - **Cloud One API Key** with Full Access (Admin)
-  - ** Cloud One Conformity AWS Account Id** Hint: it can be obtained from the Conformity API or Dashboard
+  _ [**Cloud One Account Id**](https://cloudone.trendmicro.com/docs/cloud-account-management/aws/#cloud-account-page)
+  _ [**Cloud One Conformity External Id**](https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/External-IDs)
+  - [**Cloud One API Key**](https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/) with Full Access (Admin)
+  - [**Cloud One Conformity AWS Account Id**](https://cloudone.trendmicro.com/docs/cloud-account-management/aws/#cloud-account-page)
 
-## Set up using the AWS CloudFormation Console
+## Installation
 
-- Run the AWS CloudFormation template `wellarchitected-conformity-sync.yaml`
-  ![Step 1](CF1.png)
-- Enter the required details
-  ![Step 2](CF2.png)
-- Allow the template to create AWS IAM Roles
-  ![Step 3](CF3.png)
+There are two options for installing this integration:
 
-## Set up using the AWS CLI
+### Console Installation
 
-Plug your values in the `paramaters.json` file and use the AWS CLI to run the template:
+- Log in to your [AWS Console](https://console.aws.amazon.com/)
+- Create the AWS CloudFormation Stack `Conformity-WellArchitected-sync` using `conformity-wellarchitected-sync.yaml`
 
-```
-aws cloudformation create-stack --stack-name c1c-ssm-sync --capabilities CAPABILITY_NAMED_IAM --template-body file://wellarchitected-conformity-sync-ssm.template.yaml --parameters file://parameters-ssm.json
-```
+### CLI Installation
+
+- Step 1: Run the `configure-stack.py` script with the appropriate values:
+  `configure-stack.py --workload WORKLOAD --accountId ACCOUNTID --region {trend-us-1,us-1,au-1,ie-1,sg-1,in-1,jp-1,ca-1,de-1} --apiKey APIKEY --conformityAccountId CONFORMITYACCOUNTID --externalId EXTERNALID --owner OWNER --environment ENVIRONMENT`
+- Step 2: Run the `sync.py` script with the appropriate values:
+  `sync.py --stackName STACKNAME`
 
 # Questions, Commentaries or Improvements
 

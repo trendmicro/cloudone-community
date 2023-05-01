@@ -1,10 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Set up the API sync between Cloud One Conformity and the AWS Well Architected Tool
 Parameters:
-  ExternalId:
-    Type: String
-    Description: Your Conformity Organization's External Id. See https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/Organisations#paths/~1organisation~1external-id/get for more details
-    NoEcho: true
   Workload:
     Type: String
     Description: ARN of the Well-Architected Review to synchronize. See https://console.aws.amazon.com/wellarchitected/home for more details
@@ -12,14 +8,12 @@ Parameters:
   CloudOneAccountId:
     Type: String
     Description: Cloud One Account Id of the AWS account containing the Well Architected Review to synchronize (can be obtained from Conformity Dashboard)
-    NoEcho: true
   CloudOneRegion:
     Type: String
     Description: Cloud One Conformity service region, i.e same region as your Cloud One Account
-    Default: trend-us-1
+    Default: us-1
     AllowedValues:
       - us-1
-      - trend-us-1
       - au-1
       - ie-1
       - sg-1
@@ -27,20 +21,56 @@ Parameters:
       - jp-1
       - ca-1
       - de-1
+      - trend-us-1
   CloudOneAPIKey:
     Type: String
     Description: Cloud One API Key with Admin Access
     NoEcho: true
   ConformityAccountId:
     Type: String
-    Description: Conformity AWS Account Id (can be obtained from the Conformity Dashboard)
-    NoEcho: true
+    Description: AWS Account Id of Cloud One Conformity (can be obtained from the Conformity Dashboard)
+  ExternalId:
+    Type: String
+    Description: Your Conformity Organization's External Id. See https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/External-IDs for more details
   Environment:
     Type: String
     Description: Provide the environment on which the sync will happen, i.e Sandbox, Staging, Production
   Owner:
     Type: String
-    Description: Provide the role owner's email address
+    Description: Provide the owner's email address
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Well Architected Review"
+        Parameters:
+          - Workload
+          - CloudOneAccountId
+      - Label:
+          default: "Cloud One Parameters"
+        Parameters:
+          - CloudOneRegion
+          - CloudOneAPIKey
+          - ConformityAccountId
+          - ExternalId
+      - Label:
+          default: "Tags"
+        Parameters:
+          - Environment
+          - Owner
+    ParameterLabels:
+      Workload:
+        default: "Well Architected Workload Arn"
+      CloudOneAccountId:
+        default: "Cloud One Account Id"
+      CloudOneRegion:
+        default: "Cloud One Service Region"
+      CloudOneAPIKey:
+        default: "Cloud One API Key with Full Access rights"
+      ConformityAccountId:
+        default: "Cloud One Conformity AWS Account Id"
+      ExternalId:
+        default: "Cloud One Conformity External Id"
 Resources:
   WorkloadArn:
     Type: AWS::SSM::Parameter
@@ -51,15 +81,6 @@ Resources:
       Description: ARN of the Well-Architected Review to synchronize. See https://console.aws.amazon.com/wellarchitected/home for more details
       Value:
         Ref: Workload
-  C1AccountId:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: /TrendMicro/CloudOne/Conformity/wellarchitected-sync/C1AccountId
-      DataType: text
-      Type: String
-      Description: Cloud One Account Id of the AWS account containing the Well Architected Review to synchronize (can be obtained from Conformity Dashboard)
-      Value:
-        Ref: CloudOneAccountId
   C1CRegion:
     Type: AWS::SSM::Parameter
     Properties:
@@ -76,6 +97,15 @@ Resources:
       Description: Cloud One API Key with Admin Access
       SecretString:
         Ref: CloudOneAPIKey
+  C1AccountId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /TrendMicro/CloudOne/Conformity/wellarchitected-sync/C1AccountId
+      DataType: text
+      Type: String
+      Description: Cloud One Account Id of the AWS account containing the Well Architected Review to synchronize (can be obtained from Conformity Dashboard)
+      Value:
+        Ref: CloudOneAccountId
   C1ConformitySyncPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -273,6 +303,6 @@ Resources:
             Ref: Owner
 Outputs:
   LambdaFunctionName:
-    Description: Use this name for invocation, i.e with the AWS CLI or AWS CloudShell
+    Description: Use this for invocation, i.e with the AWS CLI, AWS CloudShell or the sync.py script
     Value:
       Fn::GetAtt: [C1ConformitySyncUpdateReview, Arn]
