@@ -30,6 +30,13 @@ then
     exit
 fi
 
+# Check if eksctl is installed.
+if ! command -v kubectl &> /dev/null
+then
+    echo "kubectl could not be found. Install it following this: https://kubernetes.io/docs/tasks/tools/"
+    exit
+fi
+
 # Local state file
 STATE_FILE=".container-security-demo"
 
@@ -47,7 +54,7 @@ eksctl create cluster \
     --enable-ssm \
     --full-ecr-access \
     --alb-ingress-access \
-    --tags purpose=demo,owner="$(whoami)" \
+    --tags purpose=demo,owner=$(whoami) \
     --name "$CLUSTER_NAME"
 echo "💬 ${green}EKS Cluster $CLUSTER_NAME deployed."
 
@@ -656,7 +663,7 @@ POLICYID=$(curl --location --request POST "https://container.${REGION}.cloudone.
                 "rulesets": [
                     {
                         "name": "DemoRuleset",
-                        "id": "'"${RULESETID}"'"
+                        "id": "'${RULESETID}'"
                     }
                 ]
             }
@@ -674,9 +681,9 @@ CREATE_CLUSTER_RESULT=$(curl --location --request POST "https://container.${REGI
 --data-raw '{
   "name": "DemoCluster",
   "description": "This is a demo cluster.",
-  "policyID": "'"${POLICYID}"'"
+  "policyID": "'${POLICYID}'"
 }' | jq -r .)
-echo "$CREATE_CLUSTER_RESULT" > $STATE_FILE
+echo $CREATE_CLUSTER_RESULT > $STATE_FILE
 
 CSAPIKEY=$(cat $STATE_FILE | jq -r '.apiKey')
 CLUSTERID=$(cat $STATE_FILE | jq -r '.id')
@@ -698,6 +705,6 @@ STATE=$(jq --null-input \
   --arg rulesetid "$RULESETID" \
   --arg policyid "$POLICYID" \
   '{"clustername": $clustername, "clusterid": $clusterid, "rulesetid": $rulesetid, "policyid": $policyid}')
-echo "$STATE" > $STATE_FILE
+echo $STATE > $STATE_FILE
 
 echo "💬 ${green}Deployment completed."
