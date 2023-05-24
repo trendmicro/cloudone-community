@@ -1,6 +1,6 @@
 # Sync Well-Architected Review
 
-This tool uses Cloud One Conformity to updates your workload review with a summary of relevant check data in the "Notes" section of each review question. For an explanation of the fields in this summary, see [Understanding the Check Summary Report](https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/Well-Architected-Tool#understanding-the-check-summary-report). This automation is provided by the [Conformity API](https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/Well-Architected-Tool) which will receive a request and add all the notes to the choosen Well-Architected Review workload.
+This tool uses Cloud One Conformity to update your workload review with a summary of relevant check data in the "Notes" section of each review question. For an explanation of the fields in this summary, see [Understanding the Check Summary Report](https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/Well-Architected-Tool#understanding-the-check-summary-report). This automation is provided by the [Conformity API](https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/Well-Architected-Tool) which will receive a request and add all the notes to the chosen Well-Architected Review workload.
 
 To know more about the Well-Architect Review, check this [Blog Post](https://newsroom.trendmicro.com/2020-12-16-Companies-Leveraging-AWS-Well-Architected-Reviews-Now-Benefit-from-Security-Innovations-from-Trend-Micro)
 
@@ -11,8 +11,8 @@ To know more about the Well-Architect Review, check this [Blog Post](https://new
 - An [API key](https://cloudone.trendmicro.com/docs/account-and-user-management/c1-api-key/#create-a-new-api-key) with **"Full Access"** permission;
 - This API is only available to ADMIN users.
 - AWS CLI [installed](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [configured](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html).
-- An active Conformity AWS Account ID in your organisation
-- Your Conformity Organisation's external ID.
+- An active Conformity AWS Account ID in your organization
+- Your Conformity Organization's external ID.
 - The ARN of a defined Well-Architected workload, to retrieve the workload arn you can use the following AWS CLI command:
 
     ```bash
@@ -21,7 +21,7 @@ To know more about the Well-Architect Review, check this [Blog Post](https://new
     
     ## Setup IAM Permissions
 
-    To setup the IAM permission I've create a terraform template that you can use, it will create the policy, role and the attachment between them, first clone the repository to your machine and access the folder of this project, here the commands to deploy the permissions via terraform:
+    To setup the IAM permission I've created a terraform template that you can use, it will create the policy, role and the attachment between them, first clone the repository to your machine and access the folder of this project, here the commands to deploy the permissions via terraform:
 
     To install terraform, follow this [Guide](https://learn.hashicorp.com/tutorials/terraform/install-cli#install-terraform)
 
@@ -40,7 +40,7 @@ To know more about the Well-Architect Review, check this [Blog Post](https://new
     terraform apply -auto-approve
     ```
 
-    At the end the arn of the role will be printed in the output, keep this value to use it in the sync api call.
+    At the end, the arn of the role will be printed in the output, keep this value to use it in the sync api call.
 
     In case you rather to create via AWS console or CLI, check this documentation where we describe the step-by-step instructions: https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/Well-Architected-Tool#set-up-iam-role-via-aws-cli
     
