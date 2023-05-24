@@ -260,20 +260,22 @@ Resources:
           logger.info(f'Api Endpoint: {apiEndpoint}')
 
           header = {
-            'Content-Type': 'application/vnd.api+json',
-            'api-version': 'v1',
-            'Authorization': f'ApiKey {ApiKey}'
+            "Content-Type": "application/vnd.api+json",
+            "api-version": "v1",
+            "Authorization": f"ApiKey {ApiKey}"
           }
           logger.info(f'Header is: {header}')
 
           def lambda_handler(event, context):
             logger.info(f'Received payload: {event}')
+
+            response = None
             if 'workloadArn' not in event:
               response = {
-                'statusCode': 400,
-                'body': {
-                  'message': 'Missing parameter workloadArn',
-                  'input': event
+                "statusCode": 400,
+                "body": {
+                  "message": 'Missing parameter workloadArn',
+                  "input": event
                 }
               }
               logger.info(f'workloadArn parameter is missing. Returning an error: {response}')
@@ -281,9 +283,9 @@ Resources:
               workloadArn = event['workloadArn']
               arguments = {
                 'meta': {
-                  'accountId': f'{AccountId}',
-                  'roleArn': f'{RoleArn}',
-                  'workloadArn': f'{workloadArn}'
+                  "accountId": f'{AccountId}',
+                  "roleArn": f'{RoleArn}',
+                  "workloadArn": f'{workloadArn}'
                 }
               }
               encodedBody = json.dumps(arguments).encode('utf-8')
@@ -291,10 +293,17 @@ Resources:
 
               request = urllib.request.Request(url=apiEndpoint, data=encodedBody, headers=header, method='POST')
               logger.info(f'Querying the Cloud One Conformity API')
-              response = urllib.request.urlopen(request)
+              reply = urllib.request.urlopen(request)
 
-              decodedResponse = response.read().decode('utf-8')
+              decodedResponse = reply.read().decode('utf-8')
               logger.info(f'Response was: {decodedResponse}')
+              
+              response = {
+                "statusCode": 200,
+                "body": json.loads(decodedResponse)
+              }
+
+            return response
       TracingConfig:
         Mode: Active
       Tags:
