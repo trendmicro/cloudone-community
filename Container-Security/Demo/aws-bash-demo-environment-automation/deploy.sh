@@ -54,7 +54,7 @@ eksctl create cluster \
     --enable-ssm \
     --full-ecr-access \
     --alb-ingress-access \
-    --tags purpose=demo,owner=$(whoami) \
+    --tags purpose=demo,owner="$(whoami)" \
     --name "$CLUSTER_NAME"
 echo "💬 ${green}EKS Cluster $CLUSTER_NAME deployed."
 
