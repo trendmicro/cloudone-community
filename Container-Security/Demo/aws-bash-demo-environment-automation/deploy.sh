@@ -663,7 +663,7 @@ POLICYID=$(curl --location --request POST "https://container.${REGION}.cloudone.
                 "rulesets": [
                     {
                         "name": "DemoRuleset",
-                        "id": "'${RULESETID}'"
+                        "id": "'"${RULESETID}"'"
                     }
                 ]
             }
@@ -681,9 +681,9 @@ CREATE_CLUSTER_RESULT=$(curl --location --request POST "https://container.${REGI
 --data-raw '{
   "name": "DemoCluster",
   "description": "This is a demo cluster.",
-  "policyID": "'${POLICYID}'"
+  "policyID": "'"${POLICYID}"'"
 }' | jq -r .)
-echo $CREATE_CLUSTER_RESULT > $STATE_FILE
+echo "$CREATE_CLUSTER_RESULT" > $STATE_FILE
 
 CSAPIKEY=$(cat $STATE_FILE | jq -r '.apiKey')
 CLUSTERID=$(cat $STATE_FILE | jq -r '.id')
@@ -705,6 +705,6 @@ STATE=$(jq --null-input \
   --arg rulesetid "$RULESETID" \
   --arg policyid "$POLICYID" \
   '{"clustername": $clustername, "clusterid": $clusterid, "rulesetid": $rulesetid, "policyid": $policyid}')
-echo $STATE > $STATE_FILE
+echo "$STATE" > $STATE_FILE
 
 echo "💬 ${green}Deployment completed."
