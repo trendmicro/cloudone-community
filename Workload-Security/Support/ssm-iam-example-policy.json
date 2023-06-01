@@ -2,15 +2,20 @@
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid": "VisualEditor0",
+            "Sid": "AllowSSMActionsOnEC2Instances",
             "Effect": "Allow",
             "Action": [
                 "ssm:SendCommand",
                 "ssm:ListCommands",
-                "ec2:DescribeInstances",
                 "ssm:DescribeInstanceInformation",
                 "ssm:ListCommandInvocations"
             ],
+            "Resource": "arn:aws:ec2:*:*:instance/*"
+        },
+        {
+            "Sid": "AllowDescribeInstances",
+            "Effect": "Allow",
+            "Action": "ec2:DescribeInstances",
             "Resource": "*"
         }
     ]

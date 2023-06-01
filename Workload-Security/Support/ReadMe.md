@@ -1,4 +1,4 @@
-# Trend Cloud One Workload Security - Agent Diagnostic Collection Tool
+# Trend Workload Security - Agent Diagnostic Collection Tool for AWS SSM
 
 This tool is intended to aid in generating and collecting the workload security agent diagnostic log package.
 The output of this tool can be provided to Trend Micro Support on case creation.
@@ -14,9 +14,12 @@ The output of this tool can be provided to Trend Micro Support on case creation.
 ### Instance Requirements:
 - Requires the Workload Security Agent to be deployed on instance.
 - Requires the SSM Agent to be Installed and Running. See [here](https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html)
-- The EC2 Instance requires an IAM Role with SSMManagedCore permissions.
+- The EC2 Instance requires an IAM Role with [AWS SSMManagedCore permissions](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonSSMManagedInstanceCore.html).
 - The EC2 will need an IAM Role with S3:PutObject permissions to upload the agent diagnostic package to S3.
 - The Instance will require the AWS CLI to be installed. See [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+
+### Designated Logging Bucket
+- Requires a new or existing S3 bucket to upload logs to.
 
 ---
 
@@ -42,8 +45,10 @@ Systems Manager > Documents > All Documents > "Trend-WorkloadSecurity-SupportCol
 - Linux CLI:
 
 ```
-aws ssm start-automation-execution --document-name "Trend-WorkloadSecurity-SupportCollectionTool" --document-version "\$DEFAULT" --parameters '{"AutomationAssumeRole":["<SSM IAM Automation Role ARN Here>"],"InstanceIds":["<Instance-ID-Here>"],"S3BucketName":["<Bucket-4-Artifact-Name-Here>"]}' --region us-east-1
-111
+aws ssm start-automation-execution --document-name "Trend-WorkloadSecurity-SupportCollectionTool" --document-version "\$DEFAULT" --parameters '{"AutomationAssumeRole":["<SSM IAM Automation Role ARN Here>"],"InstanceIds":["<Instance-ID-Here>"],"S3BucketName":["<Bucket-4-Artifact-Name-Here>"]}' --region <region>
 ```
 
-
+### Self-Launch
+- Navigate to SSM > Documents > Create New > Automation
+- Paste the contents of ws-ssm-support-automation.yaml and save.
+- Execute Document.
