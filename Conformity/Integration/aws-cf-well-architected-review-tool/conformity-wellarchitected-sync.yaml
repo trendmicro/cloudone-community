@@ -1,0 +1,322 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Set up the API sync between Cloud One Conformity and the AWS Well-Architected Tool
+Parameters:
+  CloudOneAccountId:
+    Type: String
+    Description: Cloud One Account Id of the AWS account containing the Well-Architected review(s) to synchronize (can be obtained from Conformity Dashboard)
+  CloudOneRegion:
+    Type: String
+    Description: Cloud One service region
+    Default: us-1
+    AllowedValues:
+      - us-1
+      - au-1
+      - ie-1
+      - sg-1
+      - in-1
+      - jp-1
+      - ca-1
+      - de-1
+      - trend-us-1
+  CloudOneAPIKey:
+    Type: String
+    Description: Cloud One API Key with Admin Access
+    NoEcho: true
+  ConformityAccountId:
+    Type: String
+    Description: AWS Account Id of Cloud One Conformity (can be obtained from the Conformity Dashboard)
+  ExternalId:
+    Type: String
+    Description: Your Conformity Organization's External Id. See https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/External-IDs for more details
+  Environment:
+    Type: String
+    Description: Provide the environment on which the sync will happen, i.e Sandbox, Staging, Production
+  Owner:
+    Type: String
+    Description: Provide the owner's email address
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Well-Architected Review"
+        Parameters:
+          - CloudOneAccountId
+      - Label:
+          default: "Cloud One Parameters"
+        Parameters:
+          - CloudOneRegion
+          - CloudOneAPIKey
+          - ConformityAccountId
+          - ExternalId
+      - Label:
+          default: "Tags"
+        Parameters:
+          - Environment
+          - Owner
+    ParameterLabels:
+      CloudOneAccountId:
+        default: "Cloud One Account Id containing the Well-Architected Review"
+      CloudOneRegion:
+        default: "Cloud One Service Region"
+      CloudOneAPIKey:
+        default: "Cloud One API Key with Full Access rights"
+      ConformityAccountId:
+        default: "AWS Account Id of Cloud One Conformity"
+      ExternalId:
+        default: "Cloud One Conformity External Id"
+Resources:
+  C1CRegion:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /TrendMicro/CloudOne/Conformity/wellarchitected-sync/C1CRegion
+      DataType: text
+      Type: String
+      Description: Cloud One Conformity service region, i.e same region as your Cloud One Account
+      Value:
+        Ref: CloudOneRegion
+  C1APIKey:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: C1APIKey
+      Description: Cloud One API Key with Admin Access
+      SecretString:
+        Ref: CloudOneAPIKey
+  C1AccountId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /TrendMicro/CloudOne/Conformity/wellarchitected-sync/C1AccountId
+      DataType: text
+      Type: String
+      Description: Cloud One Account Id of the AWS account containing the Well Architected Review to synchronize (can be obtained from Conformity Dashboard)
+      Value:
+        Ref: CloudOneAccountId
+  C1ConformitySyncPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: C1ConformitySyncPolicy
+      Description: Allows updating the answers in all well-architected reviews in this account
+      Path: /
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "wellarchitected:GetAnswer"
+              - "wellarchitected:UpdateAnswer"
+            Resource: "*"
+  C1ConformitySyncRole:
+    Type: AWS::IAM::Role
+    DependsOn:
+      - C1ConformitySyncPolicy
+    Properties:
+      RoleName: C1ConformitySyncRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                Fn::Join:
+                  [":", ["arn:aws:iam:", Ref: ConformityAccountId, "root"]]
+            Action:
+              - "sts:AssumeRole"
+            Condition:
+              StringEquals:
+                sts:ExternalId:
+                  Ref: ExternalId
+      ManagedPolicyArns:
+        - Ref: C1ConformitySyncPolicy
+      Tags:
+        - Key: "Role"
+          Value: "Allows Cloud One Conformity to update a Well Architected review"
+        - Key: "Environment"
+          Value:
+            Ref: Environment
+        - Key: "Owner"
+          Value:
+            Ref: Owner
+  C1ConformitySyncRoleArn:
+    Type: AWS::SSM::Parameter
+    DependsOn:
+      - C1ConformitySyncRole
+    Properties:
+      Name: /TrendMicro/CloudOne/Conformity/wellarchitected-sync/C1ConformitySyncRoleArn
+      DataType: text
+      Type: String
+      Description: Conformity AWS Account Id
+      Value:
+        Fn::GetAtt: [C1ConformitySyncRole, Arn]
+  C1ConformitySyncSecretsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    DependsOn:
+      - C1APIKey
+    Properties:
+      ManagedPolicyName: C1ConformitySyncSecretsPolicy
+      Description: Allows accessing the Cloud One API Secret
+      Path: /
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "secretsmanager:DescribeSecret"
+              - "secretsmanager:GetSecretValue"
+            Resource:
+              Ref: C1APIKey
+  C1ConformitySyncParametersPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: C1ConformitySyncParametersPolicy
+      Description: Allows accessing the wellarchitected-sync lambda parameters under /TrendMicro/CloudOne/Conformity/wellarchitected-sync
+      Path: /
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "ssm:GetParametersByPath"
+            Resource:
+              Fn::Join:
+                [
+                  ":",
+                  [
+                    "arn",
+                    Ref: AWS::Partition,
+                    "ssm",
+                    Ref: AWS::Region,
+                    Ref: AWS::AccountId,
+                    "parameter/TrendMicro/CloudOne/Conformity/wellarchitected-sync/*",
+                  ],
+                ]
+  C1ConformitySyncLambdaRole:
+    Type: AWS::IAM::Role
+    DependsOn:
+      - C1ConformitySyncRole
+      - C1ConformitySyncSecretsPolicy
+      - C1ConformitySyncParametersPolicy
+    Properties:
+      RoleName: C1ConformitySyncLambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - Ref: C1ConformitySyncSecretsPolicy
+        - Ref: C1ConformitySyncParametersPolicy
+      Tags:
+        - Key: "Role"
+          Value: "Allows Cloud One Conformity Sync Function to update a Well Architected review"
+        - Key: "Environment"
+          Value:
+            Ref: Environment
+        - Key: "Owner"
+          Value:
+            Ref: Owner
+  C1ConformitySyncUpdateReview:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - C1ConformitySyncLambdaRole
+      - C1ConformitySyncRole
+    Properties:
+      Description: Updates the Well-Architected Review located at WorkloadArn
+      FunctionName: C1ConformitySyncUpdateReview
+      Role:
+        Fn::GetAtt: [C1ConformitySyncLambdaRole, Arn]
+      Runtime: python3.10
+      Architectures:
+        - arm64
+      Handler: index.lambda_handler
+      PackageType: Zip
+      Timeout: 10
+      Code:
+        ZipFile: |
+          import os
+          import boto3
+          import logging
+          import json
+          import urllib.request
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          secretsClient = boto3.client('secretsmanager')
+          ApiKey = secretsClient.get_secret_value(SecretId=f'C1APIKey')['SecretString']
+
+          parametersClient = boto3.client('ssm')
+          parametersPath = f'/TrendMicro/CloudOne/Conformity/wellarchitected-sync'
+          parameters = parametersClient.get_parameters_by_path(Path=f'{parametersPath}/')
+
+          getParameter = lambda name : [ x for x in parameters['Parameters'] if x['Name'] == f'{parametersPath}/{name}' ][0]['Value']
+          AccountId = getParameter('C1AccountId')
+          RoleArn = getParameter('C1ConformitySyncRoleArn')
+          Region = getParameter('C1CRegion')
+
+          apiEndpoint = f'https://conformity.{Region}.cloudone.trendmicro.com/api/well-architected-tool/sync'
+          logger.info(f'Api Endpoint: {apiEndpoint}')
+
+          header = {
+            "Content-Type": "application/vnd.api+json",
+            "api-version": "v1",
+            "Authorization": f"ApiKey {ApiKey}"
+          }
+          logger.info(f'Header is: {header}')
+
+          def lambda_handler(event, context):
+            logger.info(f'Received payload: {event}')
+
+            response = None
+            if 'workloadArn' not in event:
+              response = {
+                "statusCode": 400,
+                "body": {
+                  "message": 'Missing parameter workloadArn',
+                  "input": event
+                }
+              }
+              logger.info(f'workloadArn parameter is missing. Returning an error: {response}')
+            else:
+              workloadArn = event['workloadArn']
+              arguments = {
+                'meta': {
+                  "accountId": f'{AccountId}',
+                  "roleArn": f'{RoleArn}',
+                  "workloadArn": f'{workloadArn}'
+                }
+              }
+              encodedBody = json.dumps(arguments).encode('utf-8')
+              logger.info(f'Body created: {encodedBody}')
+
+              request = urllib.request.Request(url=apiEndpoint, data=encodedBody, headers=header, method='POST')
+              logger.info(f'Querying the Cloud One Conformity API')
+              reply = urllib.request.urlopen(request)
+
+              decodedResponse = reply.read().decode('utf-8')
+              logger.info(f'Response was: {decodedResponse}')
+              
+              response = {
+                "statusCode": 200,
+                "body": json.loads(decodedResponse)
+              }
+
+            return response
+      TracingConfig:
+        Mode: Active
+      Tags:
+        - Key: "Role"
+          Value: "Updates the Well-Architected Review indicated by the WorkloadArn parameter passed during invocation"
+        - Key: "Environment"
+          Value:
+            Ref: Environment
+        - Key: "Owner"
+          Value:
+            Ref: Owner
+Outputs:
+  LambdaFunctionName:
+    Description: Use this for invocation, i.e with the AWS CLI, AWS CloudShell or the sync.py script
+    Value:
+      Fn::GetAtt: [C1ConformitySyncUpdateReview, Arn]
