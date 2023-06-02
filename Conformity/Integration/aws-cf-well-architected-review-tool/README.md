@@ -1,12 +1,12 @@
-# Well Architected Conformity Sync
+# Well-Architected Conformity Sync
 
-This tools sets up a synchronization link between Cloud One Conformity and a AWS Well Architected review.
+This tool sets up a one-way synchronization link between Cloud One Conformity and a AWS Well-Architected review of your choice.
 
-The sync is intended to assist answering the questions in a Well Architected review. It works by populating the 'Notes' field with a summary of Conformity findings. This summary can be used to determine whether a workload is applying the best practices effectively.
+The sync populates the 'Notes' field with a summary of Conformity findings. This summary helps determine whether a workload is applying the best practices effectively.
 
-The sync goes in one direction and works only by demand: from Conformity to the AWS Well Architected tool. If configurations are remediated you need to run the synchronization again **but keep in mind that existing notes will be over-written.**
+The sync works only by demand; if any configurations were remediated between runs you will need to run it again **but keep in mind that existing notes will be over-written.**
 
-For further detail, see the resources below:
+For further details, see the resources below:
 
 - See [AWS Well Architected Tool](https://cloudone.trendmicro.com/docs/conformity/aws-integration/#aws-well-architected-tool) for further details about Conformity's integration with the Well Architected tool.
 
@@ -18,8 +18,8 @@ For further detail, see the resources below:
 - AWS Account Id
 - Ensure the [workload has been defined](https://docs.aws.amazon.com/wellarchitected/latest/userguide/define-workload.html) in the AWS Well Architected tool
 - Have the following information available:
-  _ [**Cloud One Account Id**](https://cloudone.trendmicro.com/docs/cloud-account-management/aws/#cloud-account-page)
-  _ [**Cloud One Conformity External Id**](https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/External-IDs)
+  - [**Cloud One Account Id**](https://cloudone.trendmicro.com/docs/cloud-account-management/aws/#cloud-account-page)
+  - [**Cloud One Conformity External Id**](https://cloudone.trendmicro.com/docs/conformity/api-reference/tag/External-IDs)
   - [**Cloud One API Key**](https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/) with Full Access (Admin)
   - [**Cloud One Conformity AWS Account Id**](https://cloudone.trendmicro.com/docs/cloud-account-management/aws/#cloud-account-page)
 
@@ -36,9 +36,11 @@ There are two options for installing this integration:
 ### CLI Installation
 
 - Step 1: Run the `configure-stack.py` script with the appropriate values:
-  `configure-stack.py --workload WORKLOAD --accountId ACCOUNTID --region {trend-us-1,us-1,au-1,ie-1,sg-1,in-1,jp-1,ca-1,de-1} --apiKey APIKEY --conformityAccountId CONFORMITYACCOUNTID --externalId EXTERNALID --owner OWNER --environment ENVIRONMENT`
+  `configure-stack.py [-h] --accountId ACCOUNTID --region {trend-us-1,us-1,au-1,ie-1,sg-1,in-1,jp-1,ca-1,de-1} --apiKey APIKEY --conformityAccountId CONFORMITYACCOUNTID --externalId EXTERNALID --owner OWNER --environment ENVIRONMENT`
 - Step 2: Run the `sync.py` script with the appropriate values:
-  `sync.py --stackName STACKNAME`
+  `sync.py [-h] [--stackName STACKNAME] --workloadArn WORKLOADARN`
+
+Note: Step #2 is the 'sync'. Invoke it to update the well-architected review of your choice.
 
 ## Resources
 

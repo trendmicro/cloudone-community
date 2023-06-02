@@ -2,6 +2,7 @@
 
 import argparse
 import boto3
+import json
 
 parser = argparse.ArgumentParser(
     description='''
@@ -12,8 +13,6 @@ parser = argparse.ArgumentParser(
     Also assumes your AWS CLI is configured and that you have sufficient permissions
     to run 'aws cloudformation create-stack' with CAPABILITY_NAMED_IAM.'
     ''')
-parser.add_argument('--workload', type=str, required=True,
-                    help='Well Architected Workload Arn')
 parser.add_argument('--accountId', type=str, required=True,
                     help='Cloud One Account Id')
 parser.add_argument('--region', type=str, required=True, choices=[
@@ -39,11 +38,6 @@ with open('conformity-wellarchitected-sync.yaml', 'r') as reader:
                                Capabilities=[ 'CAPABILITY_NAMED_IAM' ],
                                Parameters=[
                                    {
-                                       'ParameterKey': 'Workload',
-                                       'ParameterValue': f'{args.workload}',
-                                       'UsePreviousValue': True
-                                   },
-                                   {
                                        'ParameterKey': 'CloudOneAccountId',
                                        'ParameterValue': f'{args.accountId}',
                                        'UsePreviousValue': True
@@ -59,14 +53,14 @@ with open('conformity-wellarchitected-sync.yaml', 'r') as reader:
                                        'UsePreviousValue': True
                                    },
                                    {
-                                       'ParameterKey': 'ExternalId',
-                                       'ParameterValue': f'{args.externalId}',
-                                       'UsePreviousValue': True
-                                   },
-                                   {
                                       'ParameterKey': 'ConformityAccountId',
                                       'ParameterValue': f'{args.conformityAccountId}',
                                       'UsePreviousValue': True
+                                   },
+                                   {
+                                       'ParameterKey': 'ExternalId',
+                                       'ParameterValue': f'{args.externalId}',
+                                       'UsePreviousValue': True
                                    },
                                    {
                                       'ParameterKey': 'Owner',
@@ -79,5 +73,4 @@ with open('conformity-wellarchitected-sync.yaml', 'r') as reader:
                                       'UsePreviousValue': True 
                                    }
                                ])
-
-print(response)
+print(json.dumps(response, indent=4))

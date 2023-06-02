@@ -19,3 +19,5 @@
 **/*.pub
 **/*.ppk
 **/id_rsa
+
+**/__pycache__
