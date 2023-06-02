@@ -30,6 +30,13 @@ then
     exit
 fi
 
+# Check if eksctl is installed.
+if ! command -v kubectl &> /dev/null
+then
+    echo "kubectl could not be found. Install it following this: https://kubernetes.io/docs/tasks/tools/"
+    exit
+fi
+
 # Local state file
 STATE_FILE=".container-security-demo"
 

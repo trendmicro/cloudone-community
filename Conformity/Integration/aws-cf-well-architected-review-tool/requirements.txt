@@ -1,0 +1,10 @@
+boto3>=1.26.139
+botocore>=1.29.139
+cffi>=1.15.1
+docutils>=0.20.1
+jmespath>=1.0.1
+pycparser>=2.21
+python-dateutil>=2.8.2
+s3transfer>=0.6.1
+six>=1.16.0
+urllib3>=1.26.16

@@ -1,16 +1,12 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Set up the API sync between Cloud One Conformity and the AWS Well Architected Tool
+Description: Set up the API sync between Cloud One Conformity and the AWS Well-Architected Tool
 Parameters:
-  Workload:
-    Type: String
-    Description: ARN of the Well-Architected Review to synchronize. See https://console.aws.amazon.com/wellarchitected/home for more details
-    NoEcho: true
   CloudOneAccountId:
     Type: String
-    Description: Cloud One Account Id of the AWS account containing the Well Architected Review to synchronize (can be obtained from Conformity Dashboard)
+    Description: Cloud One Account Id of the AWS account containing the Well-Architected review(s) to synchronize (can be obtained from Conformity Dashboard)
   CloudOneRegion:
     Type: String
-    Description: Cloud One Conformity service region, i.e same region as your Cloud One Account
+    Description: Cloud One service region
     Default: us-1
     AllowedValues:
       - us-1
@@ -42,9 +38,8 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: "Well Architected Review"
+          default: "Well-Architected Review"
         Parameters:
-          - Workload
           - CloudOneAccountId
       - Label:
           default: "Cloud One Parameters"
@@ -59,28 +54,17 @@ Metadata:
           - Environment
           - Owner
     ParameterLabels:
-      Workload:
-        default: "Well Architected Workload Arn"
       CloudOneAccountId:
-        default: "Cloud One Account Id"
+        default: "Cloud One Account Id containing the Well-Architected Review"
       CloudOneRegion:
         default: "Cloud One Service Region"
       CloudOneAPIKey:
         default: "Cloud One API Key with Full Access rights"
       ConformityAccountId:
-        default: "Cloud One Conformity AWS Account Id"
+        default: "AWS Account Id of Cloud One Conformity"
       ExternalId:
         default: "Cloud One Conformity External Id"
 Resources:
-  WorkloadArn:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: /TrendMicro/CloudOne/Conformity/wellarchitected-sync/WorkloadArn
-      DataType: text
-      Type: String
-      Description: ARN of the Well-Architected Review to synchronize. See https://console.aws.amazon.com/wellarchitected/home for more details
-      Value:
-        Ref: Workload
   C1CRegion:
     Type: AWS::SSM::Parameter
     Properties:
@@ -110,7 +94,7 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: C1ConformitySyncPolicy
-      Description: Allows updating the well-architected review
+      Description: Allows updating the answers in all well-architected reviews in this account
       Path: /
       PolicyDocument:
         Version: "2012-10-17"
@@ -119,8 +103,7 @@ Resources:
             Action:
               - "wellarchitected:GetAnswer"
               - "wellarchitected:UpdateAnswer"
-            Resource:
-              Ref: Workload
+            Resource: "*"
   C1ConformitySyncRole:
     Type: AWS::IAM::Role
     DependsOn:
@@ -144,8 +127,6 @@ Resources:
       ManagedPolicyArns:
         - Ref: C1ConformitySyncPolicy
       Tags:
-        - Key: "Name"
-          Value: "C1ConformitySyncRole"
         - Key: "Role"
           Value: "Allows Cloud One Conformity to update a Well Architected review"
         - Key: "Environment"
@@ -193,7 +174,7 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - "ssm:GetParameter"
+              - "ssm:GetParametersByPath"
             Resource:
               Fn::Join:
                 [
@@ -227,6 +208,15 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - Ref: C1ConformitySyncSecretsPolicy
         - Ref: C1ConformitySyncParametersPolicy
+      Tags:
+        - Key: "Role"
+          Value: "Allows Cloud One Conformity Sync Function to update a Well Architected review"
+        - Key: "Environment"
+          Value:
+            Ref: Environment
+        - Key: "Owner"
+          Value:
+            Ref: Owner
   C1ConformitySyncUpdateReview:
     Type: AWS::Lambda::Function
     DependsOn:
@@ -237,7 +227,9 @@ Resources:
       FunctionName: C1ConformitySyncUpdateReview
       Role:
         Fn::GetAtt: [C1ConformitySyncLambdaRole, Arn]
-      Runtime: python3.9
+      Runtime: python3.10
+      Architectures:
+        - arm64
       Handler: index.lambda_handler
       PackageType: Zip
       Timeout: 10
@@ -256,45 +248,67 @@ Resources:
           ApiKey = secretsClient.get_secret_value(SecretId=f'C1APIKey')['SecretString']
 
           parametersClient = boto3.client('ssm')
-          WorkloadArn = parametersClient.get_parameter(Name='/TrendMicro/CloudOne/Conformity/wellarchitected-sync/WorkloadArn')['Parameter']['Value']
-          AccountId = parametersClient.get_parameter(Name='/TrendMicro/CloudOne/Conformity/wellarchitected-sync/C1AccountId')['Parameter']['Value']
-          RoleArn = parametersClient.get_parameter(Name='/TrendMicro/CloudOne/Conformity/wellarchitected-sync/C1ConformitySyncRoleArn')['Parameter']['Value']
-          Region = parametersClient.get_parameter(Name='/TrendMicro/CloudOne/Conformity/wellarchitected-sync/C1CRegion')['Parameter']['Value']
+          parametersPath = f'/TrendMicro/CloudOne/Conformity/wellarchitected-sync'
+          parameters = parametersClient.get_parameters_by_path(Path=f'{parametersPath}/')
+
+          getParameter = lambda name : [ x for x in parameters['Parameters'] if x['Name'] == f'{parametersPath}/{name}' ][0]['Value']
+          AccountId = getParameter('C1AccountId')
+          RoleArn = getParameter('C1ConformitySyncRoleArn')
+          Region = getParameter('C1CRegion')
+
+          apiEndpoint = f'https://conformity.{Region}.cloudone.trendmicro.com/api/well-architected-tool/sync'
+          logger.info(f'Api Endpoint: {apiEndpoint}')
+
+          header = {
+            "Content-Type": "application/vnd.api+json",
+            "api-version": "v1",
+            "Authorization": f"ApiKey {ApiKey}"
+          }
+          logger.info(f'Header is: {header}')
 
           def lambda_handler(event, context):
-            
-            header = {
-              "Content-Type": "application/vnd.api+json",
-              "api-version": "v1",
-              "Authorization": f"ApiKey {ApiKey}"
-            }
-            logger.info(f'Header created: {header}')
+            logger.info(f'Received payload: {event}')
 
-            arguments = {
-              "meta": {
-                "accountId": f'{AccountId}',
-                "roleArn": f'{RoleArn}',
-                "workloadArn": f'{WorkloadArn}'
+            response = None
+            if 'workloadArn' not in event:
+              response = {
+                "statusCode": 400,
+                "body": {
+                  "message": 'Missing parameter workloadArn',
+                  "input": event
+                }
               }
-            }
-            encodedBody = json.dumps(arguments).encode('utf-8')
-            logger.info(f'Body created: {encodedBody}')
+              logger.info(f'workloadArn parameter is missing. Returning an error: {response}')
+            else:
+              workloadArn = event['workloadArn']
+              arguments = {
+                'meta': {
+                  "accountId": f'{AccountId}',
+                  "roleArn": f'{RoleArn}',
+                  "workloadArn": f'{workloadArn}'
+                }
+              }
+              encodedBody = json.dumps(arguments).encode('utf-8')
+              logger.info(f'Body created: {encodedBody}')
 
-            apiEndpoint = f'https://conformity.{Region}.cloudone.trendmicro.com/api/well-architected-tool/sync'
-            logger.info(f'Api Endpoint: {apiEndpoint}')
+              request = urllib.request.Request(url=apiEndpoint, data=encodedBody, headers=header, method='POST')
+              logger.info(f'Querying the Cloud One Conformity API')
+              reply = urllib.request.urlopen(request)
 
-            request = urllib.request.Request(url=apiEndpoint, data=encodedBody, headers=header, method='POST')
-            response = urllib.request.urlopen(request)
+              decodedResponse = reply.read().decode('utf-8')
+              logger.info(f'Response was: {decodedResponse}')
+              
+              response = {
+                "statusCode": 200,
+                "body": json.loads(decodedResponse)
+              }
 
-            decodedResponse = response.read().decode('utf-8')
-            logger.info(f'Response was: {decodedResponse}')
+            return response
       TracingConfig:
         Mode: Active
       Tags:
-        - Key: "Name"
-          Value: "C1ConformitySyncLambdaRole"
         - Key: "Role"
-          Value: "Updates the Well-Architected Review located at WorkloadArn"
+          Value: "Updates the Well-Architected Review indicated by the WorkloadArn parameter passed during invocation"
         - Key: "Environment"
           Value:
             Ref: Environment
