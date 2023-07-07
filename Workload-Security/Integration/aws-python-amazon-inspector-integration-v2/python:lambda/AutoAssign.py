@@ -124,7 +124,7 @@ def lambda_handler(event, context):
     print("received event:", event)
 
     instance_ids = event["resources"]
-    cve_number = event["detail"]["title"]
+    cve_number = event["detail"]["title"].split(" ")[0]
     rules = ips_rules_from_cve_number(cve_number)  # CVE
 
     if rules:
