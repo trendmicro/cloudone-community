@@ -1,4 +1,4 @@
-# Moving your scheduled tasks from Deep Security to Cloud One Workload Security
+# Migrating your scheduled tasks from Deep Security to Cloud One Workload Security
 
 In order to help you in the migration process from Deep Security to Cloud One Workload Security, this script will help you migrate scheduled tasks from Deep Security to Cloud One Workload Security.
 
