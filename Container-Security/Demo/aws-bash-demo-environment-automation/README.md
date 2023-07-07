@@ -6,6 +6,7 @@ Welcome to the Container Security Demo Documentation. This package contains all 
 
 * Cloud One Account - Any region will do - <https://cloudone.trendmicro.com>
 * Cloud One API Key - <https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/#new-api-key>
+* kubectl - <https://kubernetes.io/docs/tasks/tools/>
 * helm - <https://helm.sh/docs/intro/install/>
 * jq - <https://stedolan.github.io/jq/download/>
 * aws cli, configured to use your AWS account of choice. - <https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html>
