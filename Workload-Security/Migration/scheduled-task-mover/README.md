@@ -12,13 +12,13 @@ This script collects your current scheduled tasks structure from Deep Security a
 
 * **Cloud One Workload Security API key**:
 
-    - Have a [Cloud One Workload Security](https://www.trendmicro.com/en_ae/business/products/hybrid-cloud/cloud-one-workload-security.html) account. [Sign up for a free trial now](https://cloudone.trendmicro.com/register) if it's not already the case!
+    - Have a [Cloud One Workload Security](https://www.trendmicro.com/en_us/business/products/hybrid-cloud/cloud-one-workload-security.html) account. [Sign up for a free trial now](https://cloudone.trendmicro.com/register) if it's not already the case!
 
     - An [API key](https://cloudone.trendmicro.com/docs/account-and-user-management/c1-api-key/#create-a-new-api-key) with **"Full Access"** permission;
 
 * **Deep Security Manager**:
 
-    - An **Auditor** or **"READ ONLY"** [API key](https://help.deepsecurity.trendmicro.com/20_0/on-premise/api-key.html), for more details on roles, check this [link](https://help.deepsecurity.trendmicro.com/20_0/on-premise/user-roles.html);
+    - At least an **Auditor** or **"READ ONLY"** [API key](https://help.deepsecurity.trendmicro.com/20_0/on-premise/api-key.html), for more details on roles, check this [link](https://help.deepsecurity.trendmicro.com/20_0/on-premise/user-roles.html);
     - Network access from the machine that you will execute the script to the Deep Security Manager;
 
 * **Software Requirements**:
