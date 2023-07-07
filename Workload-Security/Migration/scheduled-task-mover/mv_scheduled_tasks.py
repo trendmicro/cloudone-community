@@ -38,7 +38,7 @@ dsm_headers = {"api-version": "v1", "Content-Type": "application/json", "Authori
 
 #setup Cloud One API and headers
 c1 = f"https://workload.{REGION}.cloudone.trendmicro.com/api/scheduledtasks"
-c1_headers = {"api-version": "v1", "Content-Type": "application/json", "Authorization": C1_API_KEY}
+c1_headers = {"api-version": "v1", "Content-Type": "application/json", "Authorization": 'ApiKey ' + C1_API_KEY}
 
 response = requests.get(dsmurl, headers=dsm_headers)
 data = json.loads(response.content)
