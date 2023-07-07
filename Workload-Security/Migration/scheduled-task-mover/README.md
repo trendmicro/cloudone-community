@@ -41,18 +41,3 @@ C1_API_KEY = "<YOUR C1 API KEY HERE>"
 ```
 
 You're ready to execute the script! This script will notify you if there the scheduled tasks already exists and it will not create duplicates.
-
-> **Note**: The script was tested with up to 4 levels of sub-groups, but should work just fine even with more levels.
-
-## Contributing
-
-If you encounter a bug or think of a useful feature or find something confusing in the docs, please [Create a New Issue](https://github.com/trendmicro/cloudone-community/issues/new)!
-
-We :heart: pull requests. If you'd like to fix a bug or contribute to a feature or just correct a typo, please feel free to do so.
-
-If you're thinking of adding a new feature, consider opening an [issue](https://github.com/trendmicro/cloudone-community/issues/new) first to discuss the feature to ensure it aligns with the direction of the project (and potentially
-save yourself some time).
-
-## Support
-
-Official support from Trend Micro is not available. Individual contributors may be Trend Micro employees, but are not official support.
