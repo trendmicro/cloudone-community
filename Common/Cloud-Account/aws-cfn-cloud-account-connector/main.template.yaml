@@ -11,6 +11,8 @@ Metadata:
       - VisionOneServiceToken
       - CreateNewTrail
       - ExistingCloudtrailBucketName
+      - DeployCloudSentry
+      - DeployNetworkSecurityIntegration
     - Label:
         default: 'Warning: Do not modify the fields below unless you know what you
          are doing. Modifications may cause your deployment to fail.'
@@ -23,12 +25,32 @@ Metadata:
       VisionOneServiceToken:
         default: VisionOneServiceToken
     
-
 Parameters:
   CloudOneApiKey:
     Description: Cloud One API Key. You can learn more about it at https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-api-key/
     Type: String
     NoEcho: true
+  # DeployCloudTrailIntegration:
+  #   Description: Decides if the CloudTrail integration should be deployed. Defaults to True.
+  #   Type: String
+  #   AllowedValues:
+  #     - "True"
+  #     - "False"
+  #   Default: "True"
+  DeployCloudSentry:
+    Description: Decides if the Cloud Sentry integration should be deployed. Defaults to True.
+    Type: String
+    AllowedValues:
+      - "True"
+      - "False"
+    Default: "True"
+  DeployNetworkSecurityIntegration:
+    Description: Decides if the Network Security integration should be deployed. Defaults to True.
+    Type: String
+    AllowedValues:
+      - "True"
+      - "False"
+    Default: "True"
   VisionOneServiceToken:
     Description: Vision One Service Token. See step 1 at https://docs.trendmicro.com/en-us/enterprise/trend-micro-xdr-help/ConfiguringCloudOneWorkloadSecurity/
     Type: String
@@ -72,6 +94,17 @@ Conditions:
   HasNoExistingCloudtrailBucketName:
     !Equals ["True", !Ref CreateNewTrail]
 
+  DeployCloudSentry:
+    !Equals [!Ref DeployCloudSentry, "True"]
+
+  DeployNetworkSecurityIntegration:
+    !Equals [!Ref DeployNetworkSecurityIntegration, "True"]
+  
+  DeployCloudSentryAndNetworkSecurityIntegration:
+    !And
+      - !Equals [!Ref DeployCloudSentry, "True"]
+      - !Equals [!Ref DeployNetworkSecurityIntegration, "True"]
+
 Resources:
   GetCloudOneRegionAndAccountStack:
     Type: AWS::CloudFormation::Stack
@@ -106,6 +139,7 @@ Resources:
         CloudOneRegion: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneRegion
         CloudOneAccountID: !GetAtt GetCloudOneRegionAndAccountStack.Outputs.CloudOneAccountId
         CloudOneApiKey: !Ref CloudOneApiKey
+        CloudOneFeatures: !If [DeployCloudSentryAndNetworkSecurityIntegration, "cloud-sentry,network-security-deployment", !If [DeployCloudSentry, "cloud-sentry", !If [DeployNetworkSecurityIntegration, "network-security-deployment", ""]]]
       TemplateURL: !Sub 'https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}Common/Cloud-Account/aws-cfn-cloud-account-connector/cloudone.template.yaml'
     DependsOn:
       - VisionOneEnrollmentStack

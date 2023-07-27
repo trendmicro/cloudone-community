@@ -1,6 +1,6 @@
 # Add AWS Account to Cloud One
 
-To fully integrate an AWS account in Cloud One, you must deploy resources in your AWS account and do manual steps in Trend Cloud One dashboard. This CloudFormation template automates all these steps on your behalf, including integrating it to Vision One.
+To fully integrate an AWS account in Cloud One, you must deploy resources in your AWS account and do manual steps in Trend Cloud One dashboard. This CloudFormation template automates all these steps on your behalf, including integrating it to Vision One. You can also optionally also deploy Sentry and Network Security with hosted infrastructure to these AWS accounts via this automation.
 
 ## What does it actually do?
 
@@ -47,6 +47,10 @@ To fully integrate an AWS account in Cloud One, you must deploy resources in you
   - Description: Decides if a new Trail should be created. Defaults to False, so you must enter a S3 Bucket name in the ExistingCloudtrailBucketName parameter. In case you pick True, a new trail and bucket will be created for you. Setting this to True will incur in extra costs.
 - ExistingCloudtrailBucketName:
   - Description: Specify the name of an existing bucket that you want to use for forwarding to Trend Micro Cloud One. Only used if CreateNewTrail is set to False.
+- DeployCloudSentry:
+  - Description: Decides if the Cloud Sentry integration should be deployed. Defaults to True.
+- DeployNetworkSecurityIntegration:
+  - Description: Decides if the Network Security integration should be deployed. Defaults to True.
 
 ### Shouldn't be Changed from Default
 
