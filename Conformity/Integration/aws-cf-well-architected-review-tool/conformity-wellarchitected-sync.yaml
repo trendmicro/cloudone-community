@@ -17,6 +17,7 @@ Parameters:
       - jp-1
       - ca-1
       - de-1
+      - gb-1
       - trend-us-1
   CloudOneAPIKey:
     Type: String
