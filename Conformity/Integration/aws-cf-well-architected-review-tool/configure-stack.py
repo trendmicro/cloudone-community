@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--accountId', type=str, required=True,
                     help='Cloud One Account Id')
 parser.add_argument('--region', type=str, required=True, choices=[
-                    'trend-us-1', 'us-1', 'au-1', 'ie-1', 'sg-1', 'in-1', 'jp-1', 'ca-1', 'de-1', 'gb-1'], help='Cloud One Service region')
+                    'trend-us-1', 'us-1', 'in-1', 'gb-1', 'jp-1', 'de-1', 'au-1', 'ca-1', 'sg-1'], help='Cloud One Service region. See https://cloudone.trendmicro.com/docs/identity-and-account-management/c1-regions/')
 parser.add_argument('--apiKey', type=str, required=True,
                     help='Cloud One API Key with Admin Rights')
 parser.add_argument('--conformityAccountId', type=str, required=True,
