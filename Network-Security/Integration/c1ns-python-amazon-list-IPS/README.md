@@ -7,7 +7,7 @@ This deployment will give you a list of Intruision Prevention Filters that are e
 Click the below to launch the CloudFormation template.
 
 
-[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1ns-inspector-findings-protection&templateURL=https://vulnerabilitytestbucket.s3.amazonaws.com/Customers_Projects/c1ns-ips-enabled-list.yaml)
+[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1ns-Enabled-IPS&templateURL=https://vulnerabilitytestbucket.s3.amazonaws.com/Customers_Projects/c1ns-ips-enabled-list.yaml)
 
 
 ## Requirements
