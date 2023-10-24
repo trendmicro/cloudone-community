@@ -1,0 +1,371 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  This Template is using Lambda Function to List Intrusion Prevention Filters in Cloud One Network Security
+Parameters:
+  AwsRegion:
+    Type: String
+    Description: Please enter the region in which the lambda will be executed
+    Default : us-east-1
+    AllowedValues:
+      - us-east-1
+      - us-east-2   
+      - us-east-1   
+      - us-west-1   
+      - us-west-2
+      - af-south-1
+      - ap-east-1
+      - ap-southeast-3
+      - ap-south-1
+      - ap-northeast-3
+      - ap-northeast-2
+      - ap-southeast-1
+      - ap-southeast-2
+      - ap-northeast-1
+      - ca-central-1
+      - eu-central-1
+      - eu-west-1
+      - eu-west-2
+      - eu-south-1
+      - eu-west-3
+      - eu-north-1
+      - me-south-1
+      - me-central-1
+      - sa-east-1
+  CloudOneRegion:
+    Type: String
+    Description: Enter your Cloud One Region
+    Default: us-1
+    AllowedValues:
+      - trend-us-1
+      - us-1
+      - in-1
+      - gb-1
+      - jp-1
+      - de-1
+      - au-1
+      - ca-1
+      - sg-1
+  ApiKey:
+    Type: String
+    NoEcho: "true"
+    Description: Please enter your Cloud One API Key
+  EmailSender:
+    Type: String
+    Description: Email address to be used for sending report
+  EmailRecipients:
+    Type: String
+    Description: Comma separated (without spaces) email addresses for recieving report
+
+
+Resources:
+  #   This secret holds the Trend Micro Cloud One API key.
+  ApiKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: "TrendMicro/CloudOne/ApiKey"
+      SecretString: !Sub |
+        {
+          "ApiKey": "${ApiKey}"
+        }
+  LambdaIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - !Ref LambdaSESWritePolicy
+        - !Ref LambdaSecretAcessPolicy
+
+  LambdaSecretAcessPolicy: 
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - "secretsmanager:GetSecretValue"
+          - "secretsmanager:DescribeSecret"
+          - "sts:AssumeRole"
+          Resource: !Ref ApiKeySecret
+
+  LambdaSESWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - ses:CreateReceiptRule
+          - ses:UpdateConfigurationSetEventDestination
+          - ses:SetIdentityMailFromDomain
+          - ses:DeleteReceiptFilter
+          - ses:VerifyEmailIdentity
+          - ses:DeleteCustomVerificationEmailTemplate
+          - ses:TestRenderTemplate
+          - ses:CreateReceiptFilter
+          - ses:DeleteReceiptRule
+          - ses:DeleteConfigurationSet
+          - ses:CreateConfigurationSetTrackingOptions
+          - ses:UpdateAccountSendingEnabled
+          - ses:DeleteConfigurationSetEventDestination
+          - ses:VerifyDomainDkim
+          - ses:DeleteVerifiedEmailAddress
+          - ses:VerifyDomainIdentity
+          - ses:CloneReceiptRuleSet
+          - ses:SetIdentityHeadersInNotificationsEnabled
+          - ses:SendEmail
+          - ses:SendTemplatedEmail
+          - ses:SendCustomVerificationEmail
+          - ses:UpdateTemplate
+          - ses:DeleteConfigurationSetTrackingOptions
+          - ses:UpdateConfigurationSetTrackingOptions
+          - ses:SetIdentityNotificationTopic
+          - ses:SetIdentityDkimEnabled
+          - ses:PutConfigurationSetDeliveryOptions
+          - ses:VerifyEmailAddress
+          - ses:UpdateReceiptRule
+          - ses:CreateConfigurationSet
+          - ses:UpdateConfigurationSetReputationMetricsEnabled
+          - ses:DeleteReceiptRuleSet
+          - ses:CreateTemplate
+          - ses:SendRawEmail
+          - ses:ReorderReceiptRuleSet
+          - ses:SendBounce
+          - ses:UpdateConfigurationSetSendingEnabled
+          - ses:SetActiveReceiptRuleSet
+          - ses:CreateCustomVerificationEmailTemplate
+          - ses:UpdateCustomVerificationEmailTemplate
+          - ses:DeleteTemplate
+          - ses:CreateReceiptRuleSet
+          - ses:SetReceiptRulePosition
+          - ses:CreateConfigurationSetEventDestination
+          - ses:SendBulkTemplatedEmail
+          - ses:DeleteIdentity
+          - ses:SetIdentityFeedbackForwardingEnabled
+          Resource: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailRecipients}
+          Resource: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailSender}
+          
+  ListIPSFiltersFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Environment:
+        Variables:
+          region: !Ref AwsRegion
+          apikey: !Ref ApiKeySecret
+          cloudoneregion: !Ref CloudOneRegion
+          sender: !Ref EmailSender
+          recipients: !Ref EmailRecipients
+      Code:
+        ZipFile: |
+            import cfnresponse
+            import os
+            import sys, warnings
+            import csv
+            import json
+            import boto3
+            from tempfile import TemporaryFile
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            from email.mime.application import MIMEApplication
+            from urllib.request import Request, urlopen
+            from urllib.parse import urlencode
+
+
+            ##################### leave the following uncomment for Cloud Formation Template deployment.. followings are parameters that need to be input##
+            AWS_REGION = os.environ.get("awsregion")
+            SENDER = os.environ.get("sender")
+            RECIPIENTS = os.environ.get("recipients")
+            API_KEY = os.environ.get("apikey")
+            API_HOST = f"https://network.{os.environ.get('cloudoneregion')}.cloudone.trendmicro.com/api"
+
+            print("API_HOST", API_HOST)
+            ################### Uncomment the following if you running on your local machine #####################
+            # AWS_REGION = "us-east-1"
+            # SENDER = "sender@email.com"
+            # RECIPIENTS = "recipient@email.com,recipient@email.com"
+            # API_KEY = "YOUR CLOUD ONE API KEY"
+            # API_HOST = "https://network.trend-us-1.cloudone.trendmicro.com/api"  ## Replace "trend-us-1" by your Cloud One Region 
+
+            ##################### Comment out the following (secrets and sm_data) if you running on your local machine #####################
+
+            ## Getting the api key stored in secret manager
+            secrets = boto3.client('secretsmanager').get_secret_value(SecretId=API_KEY)
+            sm_data = json.loads(secrets["SecretString"])
+            new_api_format = sm_data["ApiKey"]
+
+            API_VERSION = "v1"
+            HEADERS = {
+                "api-version": API_VERSION,
+                "Authorization": f"ApiKey {new_api_format}",
+                "Content-Type": "application/json",
+            }
+
+            ## initialize the variables
+            # Create a new SES resource and specify a region.
+            ses = boto3.client("ses", region_name=AWS_REGION)
+
+
+            def send_email(sender, recipients, subject, html_body, attachment_details=None):
+                if not attachment_details:
+                    attachment_details = []
+                print("sending email ...")
+
+                msg = MIMEMultipart()
+                text_part = MIMEText(html_body, _subtype="html")
+                msg.attach(text_part)
+
+                msg["To"] = recipients
+                msg["From"] = sender
+                msg["Subject"] = subject
+
+                for item in attachment_details:
+                    filename = item["filename"]
+                    attachment = item["attachment"]
+
+                    part = MIMEApplication(attachment.read(), filename)
+                    part.add_header("Content-Disposition", "attachment", filename=filename)
+                    msg.attach(part)
+
+                ses.send_raw_email(RawMessage={"Data": msg.as_bytes()})
+
+
+            def get_all_policies(all_policies=[], next_token=None, limit=1000):
+                params = {"limit": limit}
+                if next_token:
+                    params["cursor"] = next_token
+                # use the 'headers' parameter to set the HTTP headers:
+                req = Request(API_HOST + "/policies/?" + urlencode(params))
+                for item in HEADERS.items():
+                    req.add_header(item[0], item[1])
+                response = json.loads(urlopen(req).read())
+                all_policies.extend(response["policies"])
+
+                print(f'Fetched {len(all_policies)}/{response["totalCount"]}')
+                next_token = response.get("next")
+                if next_token:
+                    get_all_policies(all_policies, next_token)
+                return all_policies
+
+
+            def get_response(url, headers=None, method="GET", data=None):
+                if data:
+                    data = json.dumps(data)
+                    # Convert to String
+                    data = str(data)
+                    # Convert string to byte
+                    data = data.encode("utf-8")
+                    # Post Method is invoked if data != None
+                    req = Request(url, method=method, data=data)
+                    # Response
+                else:
+                    req = Request(url)
+                if headers:
+                    for item in headers.items():
+                        req.add_header(item[0], item[1])
+                response = json.loads(urlopen(req).read())
+                return response
+
+
+            def save_to_csv(data):
+                # Define the CSV headers
+                csv_headers = ["Enabled IPS"]
+
+                tmp_csv_file = TemporaryFile(mode="w+", newline="")
+                writer = csv.writer(tmp_csv_file)
+                writer.writerow(csv_headers)
+                for row in data:
+                    writer.writerow(row)
+                tmp_csv_file.seek(0)
+
+                return tmp_csv_file
+
+
+            def lambda_handler(event, context):
+                try:
+                  all_policies = get_all_policies()
+                  active_policies = []
+                  for policy in all_policies:
+                      if policy["policyDefaults"]:
+                          if policy["policyDefaults"][0]["recommendedActive"]:
+                              active_policies.append([policy["name"]])
+                      if policy["policyOverrides"]:
+                          if policy["policyOverrides"][0]["enabled"]:
+                              active_policies.append([policy["name"]])
+
+                  print(f"Number of IPS Filters Enabled: {len(active_policies)}")
+
+                  # The subject line for the email.
+                  subject = (
+                      "List of Intrusion Prevention Filters Enabled from Cloud One Network Security"
+                  )
+                  csv_file = "Enabled_ips.csv"
+                  tmp_csv_file = save_to_csv(active_policies)
+
+                  attachment_details = [{"filename": csv_file, "attachment": tmp_csv_file}]
+
+                  updated_filters_html = '<table border="1">' + "\n"
+                  # write headers
+                  updated_filters_html += "</tr>" + "\n"
+                  for col in ["name"]:
+                      updated_filters_html += f"<th>{col}</th>" + "\n"
+                  updated_filters_html += "</tr>" + "\n"
+                  # write rows
+                  for row in active_policies:
+                      updated_filters_html += "<tr>" + "\n"
+                      for col in row:
+                          updated_filters_html += f"<td>{col}</td>" + "\n"
+                      updated_filters_html += "</tr>" + "\n"
+                  updated_filters_html += "</table>"
+
+                  html_body = updated_filters_html
+
+                  # The HTML body of the email.
+                  body_html = f"""<html>
+                  <head></head>
+                  <body>
+                      {html_body}
+                  </body>
+                  </html>
+                  """
+                  send_email(SENDER, RECIPIENTS, subject, body_html, attachment_details)
+                  response_data = {"result": "success"}
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+
+                except Exception as e:
+                    # Handle exceptions gracefully
+                    error_message = f"An error occurred: {str(e)}"
+                    cfnresponse.send(event, context, cfnresponse.FAILED, {"error": error_message})
+                    
+                    return {
+                        'statusCode': 500,
+                        'body': error_message
+                    }
+
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaIAMRole.Arn
+      Runtime: python3.8
+      MemorySize: 256
+      Timeout: 460
+      Description: List Enabled IP Filters in Network Security Policy
+
+  CustomResource:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt ListIPSFiltersFunction.Arn
+
+Outputs:
+  LambdaFunctionArn:
+    Description: 'The ARN of the Lambda function'
+    Value: !GetAtt ListIPSFiltersFunction.Arn
