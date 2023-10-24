@@ -22,3 +22,5 @@ Click the below to launch the CloudFormation template.
 
                 If you already have your email register in SES then no further action is needed.
 
+                After deployment you will receive an email with a csv attachment.
+
