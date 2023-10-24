@@ -1,6 +1,14 @@
 # List of Enabled Intruision Prevention Filters in Network Security
 
-Before you can deploy protection on the Network Security management interface, first add a cloud account to allow Network Security to gain access to your cloud account information.
+
+This deployment will give you a list of Intruision Prevention Filters that are enabled in you Cloud One Network Security
+
+
+Click the below to launch the CloudFormation template.
+
+
+[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=c1ns-Enabled-IPS-template&templateURL=https://vulnerabilitytestbucket.s3.amazonaws.com/Customers+Projects/c1ns-ips-enabled-list.yaml)
+
 
 ## Requirements
 
