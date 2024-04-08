@@ -6,6 +6,9 @@
 
 ## Files to be ignored start here
 
+# Ignore the 'Common' folder
+/Common/
+
 ## macOS files
 **/.DS_Store
 
