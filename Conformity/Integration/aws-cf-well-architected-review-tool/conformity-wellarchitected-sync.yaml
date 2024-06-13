@@ -10,13 +10,13 @@ Parameters:
     Default: us-1
     AllowedValues:
       - us-1
-      - au-1
-      - ie-1
-      - sg-1
       - in-1
+      - gb-1
       - jp-1
-      - ca-1
       - de-1
+      - au-1
+      - ca-1
+      - sg-1
       - trend-us-1
   CloudOneAPIKey:
     Type: String
