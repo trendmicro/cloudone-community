@@ -1,0 +1,207 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Conformity - Cloudwatch integration via SNS topic
+
+
+Parameters:
+
+  RetentionPeriod:
+    Type: Number
+    Description: cloudwatch log retention period
+    Default: 90
+  LogName:
+    Type: String
+    Description: Log name
+    Default: notifications
+
+Resources:
+
+  ConformityKMSKey:
+    Type: "AWS::KMS::Key"
+    Properties:
+      Description: "CloudConformityEncryptionKey"
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: "CloudConformityEncryptionKey"
+        Statement:
+          - Sid: "Enable Conformity Permissions"
+            Effect: "Allow"
+            Principal:
+              AWS: "arn:aws:iam::717210094962:root"
+            Action:
+              - "kms:Encrypt"
+              - "kms:Decrypt"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:DescribeKey"
+            Resource: "arn:aws:kms:*:*:key/*"
+
+          - Sid: "Allow access for Key Administrators"
+            Effect: "Allow"
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action:
+              - "kms:Create*"
+              - "kms:Describe*"
+              - "kms:Enable*"
+              - "kms:List*"
+              - "kms:Put*"
+              - "kms:Update*"
+              - "kms:Revoke*"
+              - "kms:Disable*"
+              - "kms:Get*"
+              - "kms:Delete*"
+              - "kms:TagResource"
+              - "kms:UntagResource"
+              - "kms:ScheduleKeyDeletion"
+              - "kms:CancelKeyDeletion"
+            Resource: "arn:aws:kms:*:*:key/*"
+
+
+  ConformityKMSKeyAlias:
+    Type: "AWS::KMS::Alias"
+    Properties:
+      AliasName: !Join ["", ["alias/CloudConformity_",!Ref LogName]]
+      TargetKeyId: !Ref ConformityKMSKey
+
+
+
+  ConformitySNSTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      DisplayName: !Ref LogName
+      KmsMasterKeyId: !Ref ConformityKMSKey
+      TopicName: !Ref LogName
+
+  ConformitySNSTopicPolicy:
+    Type: "AWS::SNS::TopicPolicy"
+    Properties:
+      Topics:
+        - !Ref ConformitySNSTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "AllowPublishFromConformity"
+            Effect: "Allow"
+            Principal:
+              AWS: "arn:aws:iam::717210094962:root"
+            Action: 
+              - "sns:Publish"
+            Resource: !Ref ConformitySNSTopic
+
+  AlertsLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Join ["", ["/aws", "/lambda", "/conformity_alerts_",!Ref LogName]]
+      RetentionInDays: !Ref RetentionPeriod
+
+
+  ConformityAlertsLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Join ["-", [!Ref LogName, "lambda", "alerts","role"]]
+      Description: "IAM role for lambda setup"
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: !Join ["-", [!Ref LogName, "lambda", "alerts","policy"]]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource:
+                - !GetAtt AlertsLogGroup.Arn
+            - Effect: Allow
+              Action:
+                - sns:Subscribe
+                - sns:Receive
+              Resource:
+                - !Ref ConformitySNSTopic
+                  
+
+  ConformityAlertsLambda:
+    Type: "AWS::Lambda::Function"
+    Properties:
+        Description: "Lambda to send SNS messages to cloudwatch"
+        FunctionName: "conformity_alerts_lambda"
+        Handler: index.lambda_handler
+        MemorySize: 256
+        PackageType: "Zip"
+        Role:  !GetAtt ConformityAlertsLambdaRole.Arn
+        Runtime: python3.9
+        Timeout: 180
+        Code:
+          ZipFile: |
+            import json
+            import boto3
+            import time
+            import os
+
+            def lambda_handler(event, context):
+                log_name = os.environ['LOG_NAME']                
+                # Create a CloudWatch Logs client
+                cloudwatch_logs = boto3.client('logs')
+                # Define the Log Group and Log Stream names
+                log_group_name = '/aws/lambda/conformity_alerts_'+log_name
+                log_stream_name = 'alerts'
+                try:
+                    response = cloudwatch_logs.create_log_stream(
+                        logGroupName=log_group_name,
+                        logStreamName=log_stream_name
+                    )
+                    print("Log stream created successfully.")
+                except cloudwatch_logs.exceptions.ResourceAlreadyExistsException:
+                    print("Log stream already exists.")
+                except Exception as e:
+                    print("Error creating log stream:", str(e))
+                
+                # Put the log message to CloudWatch Logs
+                cloudwatch_logs.put_log_events(
+                    logGroupName=log_group_name,
+                    logStreamName=log_stream_name,
+                    logEvents=[
+                        {
+                            'timestamp': int(round(time.time() * 1000)),
+                            'message': str(json.loads(event['Records'][0]['Sns']['Message']))
+                        }
+                    ]
+                )
+        Environment:
+          Variables:
+            LOG_NAME: !Ref LogName
+
+  ConformityLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ConformityAlertsLambda
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref ConformitySNSTopic
+
+  ConformityLambdaSNSSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref ConformitySNSTopic
+      Protocol: lambda
+      Endpoint: !GetAtt ConformityAlertsLambda.Arn
+
+Outputs:
+  TopicArn:
+    Value: !Ref ConformitySNSTopic
+    Description: SNS Topic ARN
+  LogGroupName:
+    Value: !Ref AlertsLogGroup
+    Description: Cloudwatch Log Group
